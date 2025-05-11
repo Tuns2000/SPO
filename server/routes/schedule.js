@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
+const db = require('../db');
 
-const schedule = [
-    { id: 1, group: 'Йога', time: '10:00', coach: 'Иванов' },
-    { id: 2, group: 'Плавание', time: '12:00', coach: 'Петров' },
-];
-
-router.get('/', (req, res) => {
-    res.json(schedule);
+// Получение всех расписаний
+router.get('/', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM schedules ORDER BY time');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Ошибка сервера при получении расписания' });
+  }
 });
 
 module.exports = router;
