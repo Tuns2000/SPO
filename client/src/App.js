@@ -5,11 +5,18 @@ import Register from './components/Register';
 import Login from './components/Login';
 import Subscription from './components/Subscription';
 import Profile from './components/Profile';
+import GroupList from './components/groups/GroupList';
+import GroupDetail from './components/groups/GroupDetail';
+import CoachDashboard from './components/coach/CoachDashboard';
+import AdminDashboard from './components/admin/Dashboard';
+import './components/groups/Group.css';
+
 import './styles/App.css';
 
 function App() {
   const username = localStorage.getItem('user');
   const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
 
   return (
     <div className="app-container">
@@ -23,19 +30,49 @@ function App() {
       <nav className="navbar">
         <div className="nav-links">
           <Link to="/" className="nav-link">Расписание</Link>
-          {!username && <Link to="/register" className="nav-link">Регистрация</Link>}
-          {!username && <Link to="/login" className="nav-link">Вход</Link>}
-          {username && <Link to="/subscription" className="nav-link">Абонементы</Link>}
-          {username && <Link to="/profile" className="nav-link">Профиль</Link>}
+          <Link to="/groups" className="nav-link">Группы</Link>
+          
+          {/* Ссылки для неавторизованных пользователей */}
+          {!username && (
+            <>
+              <Link to="/register" className="nav-link">Регистрация</Link>
+              <Link to="/login" className="nav-link">Вход</Link>
+            </>
+          )}
+          
+          {/* Ссылки для авторизованных пользователей (любая роль) */}
+          {username && (
+            <>
+              <Link to="/subscription" className="nav-link">Абонементы</Link>
+              <Link to="/profile" className="nav-link">Профиль</Link>
+            </>
+          )}
+          
+          {/* Ссылки для тренеров */}
+          {role === 'coach' && (
+            <Link to="/coach-dashboard" className="nav-link special-link coach-link">Панель тренера</Link>
+          )}
+          
+          {/* Ссылки для администраторов */}
+          {role === 'admin' && (
+            <>
+              <Link to="/admin-dashboard" className="nav-link special-link admin-link">Панель администратора</Link>
+            </>
+          )}
         </div>
+        
         <div>
           {username ? (
             <div className="user-info">
-              Здравствуйте, {username}!
+              <span className="user-greeting">
+                Здравствуйте, {username}!
+                {role && <span className="user-role">{roleToText(role)}</span>}
+              </span>
               <button 
                 onClick={() => {
                   localStorage.removeItem('user');
                   localStorage.removeItem('token');
+                  localStorage.removeItem('role');
                   window.location.reload();
                 }} 
                 className="logout-btn"
@@ -54,10 +91,30 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/groups" element={<GroupList />} />
+        <Route path="/groups/:id" element={<GroupDetail />} />
+        
+        {/* Защищенные маршруты - только для авторизованных пользователей */}
         <Route
           path="/subscription"
           element={
-            username ? <Subscription /> : <div className="card"><p>Доступ запрещён. Войдите в систему.</p></div>
+            username ? <Subscription /> : <AccessDenied />
+          }
+        />
+        
+        {/* Маршруты для тренеров */}
+        <Route
+          path="/coach-dashboard/*"
+          element={
+            role === 'coach' ? <CoachDashboard /> : <AccessDenied />
+          }
+        />
+        
+        {/* Маршруты для администраторов */}
+        <Route
+          path="/admin-dashboard/*"
+          element={
+            role === 'admin' ? <AdminDashboard /> : <AccessDenied />
           }
         />
       </Routes>
@@ -66,6 +123,31 @@ function App() {
       <footer className="footer">
         <p>&copy; 2025 Аквамир. Все права защищены.</p>
       </footer>
+    </div>
+  );
+}
+
+// Преобразование роли в читаемый текст
+function roleToText(role) {
+  switch(role) {
+    case 'admin':
+      return 'Администратор';
+    case 'coach':
+      return 'Тренер';
+    case 'client':
+      return 'Клиент';
+    default:
+      return role;
+  }
+}
+
+// Компонент для отображения ошибки доступа
+function AccessDenied() {
+  return (
+    <div className="access-denied">
+      <h2>Доступ запрещен</h2>
+      <p>У вас нет прав для просмотра этой страницы. Пожалуйста, войдите в систему с соответствующими правами.</p>
+      <Link to="/login" className="btn">Войти</Link>
     </div>
   );
 }

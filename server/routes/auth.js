@@ -2,13 +2,15 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const db = require('../models/database');
+const pool = require('../db');
+const auth = require('../middleware/auth');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ваш_секретный_ключ';
+const JWT_SECRET = process.env.JWT_SECRET || 'BOMBA';
 
 // Регистрация
 router.post('/register', async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role = 'client' } = req.body;
 
   try {
     // Проверка существования пользователя
@@ -21,17 +23,17 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Сохранение пользователя
+    // Сохранение пользователя с указанием роли
     const result = await db.query(
-      'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email',
-      [name, email, hashedPassword]
+      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+      [name, email, hashedPassword, role]
     );
 
     const user = result.rows[0];
 
-    // Создание JWT токена
+    // Создание JWT токена с информацией о роли
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '1d' }
     );
@@ -41,7 +43,8 @@ router.post('/register', async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role
       },
       token
     });
@@ -53,39 +56,86 @@ router.post('/register', async (req, res) => {
 
 // Авторизация
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
   try {
-    // Поиск пользователя
-    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const { email, password } = req.body;
+    
+    // Поиск пользователя по email
+    const result = await pool.query(
+      'SELECT id, name, email, password, role FROM users WHERE email = $1',
+      [email]
+    );
     
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
-
+    
     const user = result.rows[0];
-
-    // Проверка пароля
+    
+    // Сравнение паролей
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
-
+    
     // Создание JWT токена
     const token = jwt.sign(
-      { id: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: '1d' }
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET || 'BOMBA',
+      { expiresIn: '24h' }
     );
-
+    
+    // Возвращаем информацию о пользователе и токен
+    // ВАЖНО: Структура данных должна соответствовать ожиданиям клиента
     res.json({
-      message: 'Вход выполнен успешно',
-      name: user.name,
-      token
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
     });
+    
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Ошибка сервера при входе' });
+    console.error('Ошибка входа:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Получение профиля пользователя
+router.get('/profile', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Запрос базовых данных пользователя
+    const userResult = await pool.query(
+      'SELECT id, name, email, role FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Если пользователь - тренер, добавляем информацию о тренере
+    if (user.role === 'coach') {
+      const coachResult = await pool.query(
+        'SELECT specialty, experience, rating, description FROM coaches WHERE user_id = $1',
+        [userId]
+      );
+      
+      if (coachResult.rows.length > 0) {
+        user.coach_info = coachResult.rows[0];
+      }
+    }
+    
+    res.json(user);
+  } catch (err) {
+    console.error('Ошибка при получении профиля:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
 

@@ -1,74 +1,96 @@
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import '../styles/Auth.css';
 
 function Login() {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = location.state?.redirectTo || '/';
 
-  const handleChange = e => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setError('');
-  };
-
-  const handleSubmit = e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     
-    axios.post('http://localhost:3000/api/auth/login', form)
-      .then(res => {
-        localStorage.setItem('user', res.data.name);
-        localStorage.setItem('token', res.data.token);
-        navigate('/profile');
-        window.location.reload(); // Обновляем страницу для отображения новой навигации
-      })
-      .catch(err => {
-        setError(err.response?.data?.error || 'Ошибка при входе');
-        setLoading(false);
+    try {
+      const response = await axios.post('http://localhost:3000/api/auth/login', {
+        email,
+        password
       });
+      
+      console.log('Ответ от сервера:', response.data); // отладочный лог
+      
+      // Проверка структуры ответа перед сохранением
+      if (response.data && response.data.token) {
+        // Сохраняем токен
+        localStorage.setItem('token', response.data.token);
+        
+        // Сохраняем информацию о пользователе
+        localStorage.setItem('user', response.data.user.name);
+        localStorage.setItem('role', response.data.user.role);
+        
+        // Перенаправляем пользователя с обновлением страницы
+        window.location.href = redirectTo;
+      } else {
+        throw new Error('Некорректный формат ответа от сервера');
+      }
+    } catch (err) {
+      console.error('Ошибка входа:', err);
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError('Произошла ошибка при входе. Пожалуйста, попробуйте снова.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="card">
-      <h2>Вход в личный кабинет</h2>
-      {error && <div className="error-message" style={{color: 'red', marginBottom: '15px'}}>{error}</div>}
-      
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="email">Email:</label>
-          <input 
-            id="email"
-            name="email" 
-            type="email" 
-            placeholder="Введите ваш email" 
-            onChange={handleChange}
-            value={form.email}
-            className="form-input" 
-            required 
-          />
-        </div>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2>Вход в систему</h2>
         
-        <div className="form-group">
-          <label htmlFor="password">Пароль:</label>
-          <input 
-            id="password"
-            name="password" 
-            type="password" 
-            placeholder="Введите ваш пароль" 
-            onChange={handleChange}
-            value={form.password}
-            className="form-input" 
-            required 
-          />
-        </div>
+        {error && <div className="error-message">{error}</div>}
         
-        <button type="submit" className="btn" disabled={loading}>
-          {loading ? 'Вход...' : 'Войти'}
-        </button>
-      </form>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="email">Email:</label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="password">Пароль:</label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          
+          <button type="submit" className="auth-button" disabled={loading}>
+            {loading ? 'Вход...' : 'Войти'}
+          </button>
+        </form>
+        
+        <div className="auth-links">
+          Нет аккаунта? <a href="/register">Зарегистрироваться</a>
+        </div>
+      </div>
     </div>
   );
 }

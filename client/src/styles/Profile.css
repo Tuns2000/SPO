@@ -1,0 +1,272 @@
+.profile-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.profile-container h2 {
+  color: #0277bd;
+  margin-bottom: 20px;
+}
+
+.profile-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.profile-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.wide-card {
+  grid-column: 1 / -1;
+}
+
+.profile-header {
+  padding: 15px 20px;
+  background-color: #e3f2fd;
+  border-bottom: 1px solid #bbdefb;
+}
+
+.profile-header h3 {
+  margin: 0;
+  color: #0277bd;
+  font-size: 1.2rem;
+}
+
+.profile-content {
+  padding: 20px;
+}
+
+.profile-info {
+  margin-bottom: 20px;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-label {
+  width: 80px;
+  font-weight: 600;
+  color: #666;
+}
+
+.info-value {
+  flex: 1;
+  color: #333;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background-color: #e3f2fd;
+  color: #0277bd;
+}
+
+.profile-actions {
+  margin-top: 15px;
+}
+
+.profile-button {
+  width: 100%;
+  padding: 10px 15px;
+  background-color: #0288d1;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s;
+}
+
+.profile-button:hover {
+  background-color: #0277bd;
+}
+
+.role-specific-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-link-button {
+  display: block;
+  padding: 12px 15px;
+  background-color: #f5f5f5;
+  color: #333;
+  text-decoration: none;
+  border-radius: 4px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.profile-link-button:hover {
+  background-color: #e0e0e0;
+  transform: translateY(-2px);
+}
+
+.coach-button {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.coach-button:hover {
+  background-color: #a5d6a7;
+}
+
+.admin-button {
+  background-color: #ffcdd2;
+  color: #c62828;
+}
+
+.admin-button:hover {
+  background-color: #ef9a9a;
+}
+
+.subscription-status {
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.status-active {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.status-inactive {
+  background-color: #ffecb3;
+  color: #ff8f00;
+}
+
+.enrollments-list, .notifications-list {
+  padding: 10px 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.enrollment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.enrollment-info {
+  flex: 1;
+}
+
+.enrollment-group {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 5px;
+}
+
+.enrollment-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.enrollment-view-button {
+  padding: 5px 15px;
+  background-color: #e3f2fd;
+  color: #0277bd;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.enrollment-view-button:hover {
+  background-color: #bbdefb;
+}
+
+.notification-item {
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  position: relative;
+}
+
+.notification-item.unread {
+  background-color: #e3f2fd;
+  border-left: 4px solid #0277bd;
+}
+
+.notification-item.read {
+  background-color: #f5f5f5;
+  border-left: 4px solid #bdbdbd;
+}
+
+.notification-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #0277bd;
+}
+
+.notification-message {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.notification-date {
+  font-size: 0.8rem;
+  color: #757575;
+}
+
+.mark-read-button {
+  padding: 5px 10px;
+  background-color: #0288d1;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.mark-read-button:hover {
+  background-color: #0277bd;
+}
+
+.empty-notifications {
+  padding: 20px;
+  text-align: center;
+  color: #757575;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .profile-sections {
+    grid-template-columns: 1fr;
+  }
+  
+  .enrollment-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .enrollment-view-button {
+    margin-top: 10px;
+  }
+}

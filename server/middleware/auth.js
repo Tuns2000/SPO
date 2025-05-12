@@ -1,28 +1,25 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ваш_секретный_ключ';
-
-function authMiddleware(req, res, next) {
-  // Получение токена из заголовка
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Доступ запрещен, отсутствует токен' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  
+module.exports = (req, res, next) => {
   try {
-    // Верификация токена
-    const decoded = jwt.verify(token, JWT_SECRET);
+    // Получаем токен из заголовка Authorization
+    const authHeader = req.headers.authorization;
     
-    // Добавляем информацию пользователя в объект запроса
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Не предоставлен токен авторизации' });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    
+    // Верифицируем токен
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'BOMBA');
+    
+    // Добавляем информацию о пользователе в объект запроса
     req.user = decoded;
     
     next();
-  } catch (error) {
-    res.status(401).json({ error: 'Недействительный токен' });
+  } catch (err) {
+    console.error('Ошибка аутентификации:', err);
+    return res.status(401).json({ error: 'Неверный токен авторизации' });
   }
-}
-
-module.exports = authMiddleware;
+};

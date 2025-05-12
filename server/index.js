@@ -2,30 +2,34 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 
-// Загрузка переменных окружения
+// Загружаем переменные окружения из файла .env
 dotenv.config();
 
+// Правильный импорт функции initDB
+const { initDB } = require('./models/init-db');
+
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Маршруты
-const authRoutes = require('./routes/auth');
-const subscriptionRoutes = require('./routes/subscription');
-const scheduleRoutes = require('./routes/schedule');
+// Инициализация базы данных
+initDB();
 
-app.use('/api/auth', authRoutes);
-app.use('/api/subscription', subscriptionRoutes);
-app.use('/api/schedule', scheduleRoutes);
+// Подключаем маршруты
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/group', require('./routes/group'));
+app.use('/api/subscription', require('./routes/subscription'));
+app.use('/api/user', require('./routes/user'));
+app.use('/api/notification', require('./routes/notification'));
+app.use('/api/coach', require('./routes/coach'));
+app.use('/api/schedule', require('./routes/schedule'));
 
-// Тестовый маршрут
-app.get('/', (req, res) => {
-  res.send('API сервера работает!');
-});
+// Порт для сервера
+const PORT = process.env.PORT || 3000;
 
+// Запускаем сервер
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
 });
