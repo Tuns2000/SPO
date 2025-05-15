@@ -13,6 +13,18 @@ async function initDB() {
       );
     `);
 
+    // Создание таблицы тренеров
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS coaches (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) UNIQUE,
+        specialty VARCHAR(255),
+        experience INTEGER DEFAULT 0,
+        rating NUMERIC(3,2) DEFAULT 0,
+        description TEXT
+      );
+    `);
+
     // Создание таблицы абонементов
     await pool.query(`
       CREATE TABLE IF NOT EXISTS subscriptions (
@@ -33,6 +45,29 @@ async function initDB() {
         group_name VARCHAR(100) NOT NULL,
         time VARCHAR(50) NOT NULL,
         coach VARCHAR(100) NOT NULL
+      );
+    `);
+
+    // Создание таблицы групп
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS groups (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        capacity INTEGER NOT NULL,
+        description TEXT,
+        coach_id INTEGER REFERENCES users(id)
+      );
+    `);
+
+    // Создание таблицы записей в группы
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS group_enrollments (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        group_id INTEGER REFERENCES groups(id),
+        enrollment_date DATE DEFAULT CURRENT_DATE,
+        status VARCHAR(20) DEFAULT 'active',
+        UNIQUE(user_id, group_id)
       );
     `);
 

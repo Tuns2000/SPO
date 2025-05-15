@@ -78,11 +78,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
     
-    // Создание JWT токена
+    // Создание JWT токена с более длительным сроком действия
     const token = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET || 'BOMBA',
-      { expiresIn: '24h' }
+      { expiresIn: '7d' }  // Увеличиваем срок до 7 дней вместо 24h
     );
     
     // Возвращаем информацию о пользователе и токен
@@ -107,12 +107,15 @@ router.post('/login', async (req, res) => {
 router.get('/profile', auth, async (req, res) => {
   try {
     const userId = req.user.id;
+    console.log('Запрос профиля для пользователя ID:', userId);
     
     // Запрос базовых данных пользователя
     const userResult = await pool.query(
       'SELECT id, name, email, role FROM users WHERE id = $1',
       [userId]
     );
+    
+    console.log('Результат запроса пользователя:', userResult.rows);
     
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'Пользователь не найден' });

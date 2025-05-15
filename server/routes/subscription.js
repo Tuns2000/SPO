@@ -7,65 +7,82 @@ const { NotificationService } = require('../models/notification-observer');
 
 const notificationService = new NotificationService();
 
-// Маршрут для оформления нового абонемента
+// Оформление нового абонемента
 router.post('/', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const { type } = req.body;
     
-    // Проверяем тип абонемента
+    console.log('Получен запрос на создание абонемента:', req.body);
+    
+    // Проверка типа абонемента
     if (!type || !['single', 'monthly', 'quarterly', 'annual'].includes(type)) {
       return res.status(400).json({ 
         error: 'Неверный тип абонемента. Доступные типы: single, monthly, quarterly, annual'
       });
     }
     
-    // Определяем продолжительность и цену абонемента
-    let duration, price;
+    // Проверяем, что таблица subscriptions существует
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'subscriptions'
+      );
+    `);
     
-    switch (type) {
+    if (!tableCheck.rows[0].exists) {
+      // Если таблицы нет, создаем её
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS subscriptions (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id),
+          type VARCHAR(50) NOT NULL,
+          description VARCHAR(255),
+          start_date DATE DEFAULT CURRENT_DATE,
+          end_date DATE NOT NULL,
+          price NUMERIC(10, 2) NOT NULL,
+          active BOOLEAN DEFAULT TRUE
+        );
+      `);
+    }
+    
+    // Определяем параметры абонемента
+    let duration, price, description;
+    
+    switch(type) {
       case 'single':
-        duration = 1;
+        duration = 1; // 1 день
         price = 500;
+        description = 'Разовое посещение';
         break;
       case 'monthly':
-        duration = 30;
+        duration = 30; // 30 дней
         price = 5000;
+        description = 'Месячный абонемент';
         break;
       case 'quarterly':
-        duration = 90;
+        duration = 90; // 90 дней
         price = 12000;
+        description = 'Квартальный абонемент';
         break;
       case 'annual':
-        duration = 365;
+        duration = 365; // 365 дней
         price = 40000;
+        description = 'Годовой абонемент';
         break;
     }
     
     // Создаем новый абонемент
     const result = await pool.query(
       `INSERT INTO subscriptions 
-       (user_id, type, start_date, end_date, price, active)
-       VALUES ($1, $2, CURRENT_DATE, CURRENT_DATE + INTERVAL '${duration} days', $3, TRUE)
-       RETURNING id, type, start_date, end_date, price, active`,
-      [userId, type, price]
+       (user_id, type, description, start_date, end_date, price, active)
+       VALUES ($1, $2, $3, CURRENT_DATE, CURRENT_DATE + INTERVAL '${duration} days', $4, TRUE)
+       RETURNING id, type, description, start_date, end_date, price, active`,
+      [userId, type, description, price]
     );
     
     const subscription = result.rows[0];
     
-    // Отправка уведомления пользователю
-    await notificationService.notifyUser(
-      userId,
-      'Абонемент оформлен',
-      `Вы успешно оформили абонемент "${type}". Действует до ${subscription.end_date}.`
-    );
-
-    // Отправка уведомления администраторам
-    await notificationService.notifyAdmins(
-      'Новый абонемент',
-      `Пользователь ${req.user.email} оформил абонемент "${type}".`
-    );
-
     // Возвращаем информацию о новом абонементе
     res.status(201).json({
       message: 'Абонемент успешно оформлен',
@@ -78,13 +95,41 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Добавим маршрут для получения абонементов пользователя
+// Получение всех абонементов пользователя
 router.get('/my', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     
+    // Проверяем, что таблица subscriptions существует
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'subscriptions'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      // Если таблицы нет, создаем её
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS subscriptions (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id),
+          type VARCHAR(50) NOT NULL,
+          description VARCHAR(255),
+          start_date DATE DEFAULT CURRENT_DATE,
+          end_date DATE NOT NULL,
+          price NUMERIC(10, 2) NOT NULL,
+          active BOOLEAN DEFAULT TRUE
+        );
+      `);
+      
+      // Если таблица только что создана, вернем пустой массив
+      return res.json([]);
+    }
+    
+    // Запрашиваем абонементы пользователя
     const result = await pool.query(
-      `SELECT id, type, start_date, end_date, price, active 
+      `SELECT id, type, description, start_date, end_date, price, active 
        FROM subscriptions 
        WHERE user_id = $1
        ORDER BY start_date DESC`,
@@ -116,42 +161,31 @@ router.get('/all', auth, roleMiddleware(['admin']), async (req, res) => {
 });
 
 // Отмена абонемента
-router.put('/:id/cancel', auth, async (req, res) => {
-  const { id } = req.params;
-  const userId = req.user.id;
-
+router.delete('/:id', auth, async (req, res) => {
   try {
-    // Проверка, принадлежит ли абонемент пользователю или является ли пользователь админом
-    const subscription = await pool.query(
-      'SELECT * FROM subscriptions WHERE id = $1',
-      [id]
+    const userId = req.user.id;
+    const subscriptionId = req.params.id;
+    
+    // Проверяем, принадлежит ли абонемент пользователю
+    const checkResult = await pool.query(
+      'SELECT id FROM subscriptions WHERE id = $1 AND user_id = $2',
+      [subscriptionId, userId]
     );
-
-    if (subscription.rows.length === 0) {
+    
+    if (checkResult.rows.length === 0) {
       return res.status(404).json({ error: 'Абонемент не найден' });
     }
-
-    if (subscription.rows[0].user_id !== userId && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Недостаточно прав' });
-    }
-
-    // Отмена абонемента
+    
+    // Деактивируем абонемент (не удаляем полностью из БД)
     await pool.query(
-      'UPDATE subscriptions SET active = false WHERE id = $1',
-      [id]
+      'UPDATE subscriptions SET active = FALSE WHERE id = $1',
+      [subscriptionId]
     );
-
-    // Отправка уведомления
-    await notificationService.notifyUser(
-      subscription.rows[0].user_id,
-      'Абонемент отменен',
-      `Абонемент "${subscription.rows[0].type}" был отменен.`
-    );
-
+    
     res.json({ message: 'Абонемент успешно отменен' });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Ошибка сервера при отмене абонемента' });
+    console.error('Ошибка при отмене абонемента:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
 

@@ -41,39 +41,36 @@ async function initDB() {
       `);
     }
 
-    // Проверка и создание таблицы coaches
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS coaches (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        specialty VARCHAR(100) NOT NULL,
-        experience INTEGER NOT NULL DEFAULT 0,
-        rating DECIMAL(3,2) DEFAULT 0,
-        description TEXT
-      );
-    `);
-
     // Проверка и создание таблицы групп
     await db.query(`
       CREATE TABLE IF NOT EXISTS groups (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        coach_id INTEGER REFERENCES coaches(id) ON DELETE SET NULL,
-        capacity INTEGER NOT NULL DEFAULT 20,
+        name VARCHAR(255) NOT NULL,
+        capacity INTEGER NOT NULL,
         description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        coach_id INTEGER REFERENCES users(id)
       );
     `);
 
     // Проверка и создание таблицы записи в группу
     await db.query(`
-      CREATE TABLE IF NOT EXISTS group_enrollments (
+      CREATE TABLE IF NOT EXISTS enrollments (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
-        enrollment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        status VARCHAR(20) DEFAULT 'active',
+        user_id INTEGER REFERENCES users(id),
+        group_id INTEGER REFERENCES groups(id),
+        enrollment_date DATE DEFAULT CURRENT_DATE,
         UNIQUE(user_id, group_id)
+      );
+    `);
+
+    // Проверка и создание таблицы расписаний
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS schedules (
+        id SERIAL PRIMARY KEY, 
+        group_id INTEGER REFERENCES groups(id),
+        date DATE NOT NULL,
+        time TIME NOT NULL,
+        UNIQUE(group_id, date, time)
       );
     `);
 
@@ -81,60 +78,15 @@ async function initDB() {
     await db.query(`
       CREATE TABLE IF NOT EXISTS subscriptions (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        type VARCHAR(100) NOT NULL,
-        price DECIMAL(10,2) NOT NULL,
-        start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        end_date TIMESTAMP,
-        active BOOLEAN DEFAULT true
+        user_id INTEGER REFERENCES users(id),
+        type VARCHAR(50) NOT NULL,
+        description VARCHAR(255),
+        start_date DATE DEFAULT CURRENT_DATE,
+        end_date DATE NOT NULL,
+        price NUMERIC(10, 2) NOT NULL,
+        active BOOLEAN DEFAULT TRUE
       );
     `);
-
-    // Проверка и создание таблицы schedules
-    // Сначала проверяем существование таблицы schedules
-    const checkSchedulesTable = await db.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_name = 'schedules'
-      );
-    `);
-    
-    if (checkSchedulesTable.rows[0].exists) {
-      // Проверяем структуру таблицы
-      const checkGroupIdColumn = await db.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.columns 
-          WHERE table_schema = 'public' AND table_name = 'schedules' AND column_name = 'group_id'
-        );
-      `);
-      
-      if (!checkGroupIdColumn.rows[0].exists) {
-        console.log('Удаляем старую таблицу schedules и создаем новую с правильной структурой');
-        await db.query('DROP TABLE schedules;');
-        await db.query(`
-          CREATE TABLE schedules (
-            id SERIAL PRIMARY KEY,
-            group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
-            date DATE NOT NULL,
-            time TIME NOT NULL,
-            status VARCHAR(20) DEFAULT 'scheduled',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          );
-        `);
-      }
-    } else {
-      // Создание таблицы расписаний
-      await db.query(`
-        CREATE TABLE schedules (
-          id SERIAL PRIMARY KEY,
-          group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
-          date DATE NOT NULL,
-          time TIME NOT NULL,
-          status VARCHAR(20) DEFAULT 'scheduled',
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-    }
 
     // Создание таблицы для статистики и отчетов
     await db.query(`
@@ -232,6 +184,22 @@ async function addTestData() {
   } catch (err) {
     console.error('Ошибка при добавлении тестовых данных:', err);
   }
+}
+
+async function createTables() {
+  // Создание таблицы subscriptions с правильной структурой
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      type VARCHAR(50) NOT NULL,
+      description VARCHAR(255),
+      start_date DATE DEFAULT CURRENT_DATE,
+      end_date DATE NOT NULL,
+      price NUMERIC(10, 2) NOT NULL,
+      active BOOLEAN DEFAULT TRUE
+    );
+  `);
 }
 
 module.exports = { initDB };

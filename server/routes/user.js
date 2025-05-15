@@ -12,13 +12,12 @@ router.get('/enrollments', auth, async (req, res) => {
       `SELECT 
          g.id as group_id,
          g.name as group_name,
-         CONCAT(u.name) as coach_name,
-         ge.enrollment_date
+         u.name as coach_name,
+         TO_CHAR(ge.enrollment_date, 'DD.MM.YYYY') as enrollment_date
        FROM group_enrollments ge
        JOIN groups g ON ge.group_id = g.id
-       JOIN coaches c ON g.coach_id = c.id
-       JOIN users u ON c.user_id = u.id
-       WHERE ge.user_id = $1
+       JOIN users u ON g.coach_id = u.id
+       WHERE ge.user_id = $1 AND ge.status = 'active'
        ORDER BY ge.enrollment_date DESC`,
       [userId]
     );

@@ -9,6 +9,7 @@ import GroupList from './components/groups/GroupList';
 import GroupDetail from './components/groups/GroupDetail';
 import CoachDashboard from './components/coach/CoachDashboard';
 import AdminDashboard from './components/admin/Dashboard';
+import MyEnrollments from './components/user/MyEnrollments';
 import './components/groups/Group.css';
 
 import './styles/App.css';
@@ -45,6 +46,7 @@ function App() {
             <>
               <Link to="/subscription" className="nav-link">Абонементы</Link>
               <Link to="/profile" className="nav-link">Профиль</Link>
+              <Link to="/my-enrollments" className="nav-link">Мои группы</Link>
             </>
           )}
           
@@ -115,6 +117,14 @@ function App() {
           path="/admin-dashboard/*"
           element={
             role === 'admin' ? <AdminDashboard /> : <AccessDenied />
+          }
+        />
+        
+        {/* Маршрут для страницы "Мои группы" */}
+        <Route
+          path="/my-enrollments"
+          element={
+            username ? <MyEnrollments /> : <AccessDenied />
           }
         />
       </Routes>

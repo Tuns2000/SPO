@@ -1,108 +1,154 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import '../styles/Subscription.css';
 
 function Subscription() {
   const [subscriptions, setSubscriptions] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
   
+  const navigate = useNavigate();
   const token = localStorage.getItem('token');
   
+  // Получаем абонементы пользователя при загрузке
   useEffect(() => {
-    if (token) {
-      axios.get('http://localhost:3000/api/subscription/my', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(res => {
-          setSubscriptions(res.data);
-        })
-        .catch(err => console.error(err));
-    }
-  }, [token]);
-
-  const handleSubscribe = (type, price) => {
-    setLoading(true);
-    setError('');
-    setSuccess('');
-    
-    axios.post('http://localhost:3000/api/subscription', 
-      { type, price },
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-      .then(res => {
-        setSuccess('Абонемент успешно оформлен!');
-        // Обновляем список абонементов
-        return axios.get('http://localhost:3000/api/subscription/my', {
+    const fetchSubscriptions = async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/api/subscription/my', {
           headers: { Authorization: `Bearer ${token}` }
         });
-      })
-      .then(res => {
-        setSubscriptions(res.data);
+        setSubscriptions(response.data);
         setLoading(false);
-      })
-      .catch(err => {
-        setError(err.response?.data?.error || 'Ошибка при оформлении абонемента');
+      } catch (err) {
+        handleApiError(err, 'Не удалось загрузить абонементы');
         setLoading(false);
-      });
+      }
+    };
+    
+    if (token) {
+      fetchSubscriptions();
+    } else {
+      setError('Необходимо авторизоваться для просмотра абонементов');
+      setLoading(false);
+    }
+  }, [token]);
+  
+  // Обработчик оформления абонемента
+  const handleSubscribe = async (type) => {
+    try {
+      setError(null);
+      setSuccessMessage('');
+      
+      // Проверяем, что тип абонемента является одним из допустимых значений
+      if (!['single', 'monthly', 'quarterly', 'annual'].includes(type)) {
+        setError('Неверный тип абонемента');
+        return;
+      }
+      
+      const response = await axios.post('http://localhost:3000/api/subscription', 
+        { type }, // Важно! Отправляем объект с полем type
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Добавляем новый абонемент в список
+      setSubscriptions([response.data.subscription, ...subscriptions]);
+      setSuccessMessage('Абонемент успешно оформлен!');
+      
+    } catch (err) {
+      handleApiError(err, 'Ошибка при оформлении абонемента');
+    }
   };
-
+  
+  // Обработка ошибок API с учетом истекшего токена
+  const handleApiError = (err, defaultMessage) => {
+    console.error(err);
+    
+    // Если токен истек - перенаправляем на страницу входа
+    if (err.response?.data?.tokenExpired) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      navigate('/login', { state: { redirectTo: '/subscription', message: 'Сессия истекла, пожалуйста, войдите снова' } });
+      return;
+    }
+    
+    // Иначе показываем сообщение об ошибке
+    setError(err.response?.data?.error || defaultMessage);
+  };
+  
+  // Отображение списка абонементов и форм подписки
   return (
-    <>
-      <div className="card">
-        <h2>Абонементы</h2>
-        {error && <div className="error-message" style={{color: 'red', marginBottom: '15px'}}>{error}</div>}
-        {success && <div className="success-message" style={{color: 'green', marginBottom: '15px'}}>{success}</div>}
-        
-        <div className="subscription-types">
-          <div className="subscription-card">
-            <div className="subscription-name">Стандарт</div>
-            <div className="subscription-price">2 500 ₽</div>
-            <ul className="subscription-features">
-              <li className="subscription-feature">8 посещений в месяц</li>
-              <li className="subscription-feature">Доступ к основному бассейну</li>
-              <li className="subscription-feature">Шкафчик для личных вещей</li>
+    <div className="subscription-container">
+      <h1>Абонементы</h1>
+      
+      {error && <div className="error-message">{error}</div>}
+      {successMessage && <div className="success-message">{successMessage}</div>}
+      
+      <div className="subscription-plans">
+        <h2>Оформить абонемент</h2>
+        <div className="plans-grid">
+          <div className="plan-card">
+            <h3>Разовое посещение</h3>
+            <p className="plan-price">500 ₽</p>
+            <ul className="plan-features">
+              <li>Одно посещение</li>
+              <li>Доступ ко всем зонам</li>
+              <li>Действует 1 день</li>
             </ul>
             <button 
-              onClick={() => handleSubscribe('Стандарт', 2500)} 
-              className="btn"
-              disabled={loading}
+              className="subscribe-button"
+              onClick={() => handleSubscribe('single')}
             >
               Оформить
             </button>
           </div>
           
-          <div className="subscription-card">
-            <div className="subscription-name">Премиум</div>
-            <div className="subscription-price">4 000 ₽</div>
-            <ul className="subscription-features">
-              <li className="subscription-feature">Неограниченные посещения</li>
-              <li className="subscription-feature">Доступ ко всем зонам</li>
-              <li className="subscription-feature">Бесплатное полотенце</li>
-              <li className="subscription-feature">Сауна включена</li>
+          <div className="plan-card">
+            <h3>Месячный</h3>
+            <p className="plan-price">5000 ₽</p>
+            <ul className="plan-features">
+              <li>Неограниченные посещения</li>
+              <li>Доступ ко всем зонам</li>
+              <li>Действует 30 дней</li>
             </ul>
             <button 
-              onClick={() => handleSubscribe('Премиум', 4000)} 
-              className="btn"
-              disabled={loading}
+              className="subscribe-button"
+              onClick={() => handleSubscribe('monthly')}
             >
               Оформить
             </button>
           </div>
           
-          <div className="subscription-card">
-            <div className="subscription-name">Семейный</div>
-            <div className="subscription-price">6 500 ₽</div>
-            <ul className="subscription-features">
-              <li className="subscription-feature">До 4-х человек</li>
-              <li className="subscription-feature">Неограниченные посещения</li>
-              <li className="subscription-feature">Детская зона</li>
-              <li className="subscription-feature">Групповые занятия включены</li>
+          <div className="plan-card featured">
+            <div className="best-value">Лучшая цена</div>
+            <h3>Квартальный</h3>
+            <p className="plan-price">12000 ₽</p>
+            <ul className="plan-features">
+              <li>Неограниченные посещения</li>
+              <li>Доступ ко всем зонам</li>
+              <li>Действует 90 дней</li>
             </ul>
             <button 
-              onClick={() => handleSubscribe('Семейный', 6500)} 
-              className="btn"
-              disabled={loading}
+              className="subscribe-button"
+              onClick={() => handleSubscribe('quarterly')}
+            >
+              Оформить
+            </button>
+          </div>
+          
+          <div className="plan-card">
+            <h3>Годовой</h3>
+            <p className="plan-price">40000 ₽</p>
+            <ul className="plan-features">
+              <li>Неограниченные посещения</li>
+              <li>Доступ ко всем зонам</li>
+              <li>Действует 365 дней</li>
+            </ul>
+            <button 
+              className="subscribe-button"
+              onClick={() => handleSubscribe('annual')}
             >
               Оформить
             </button>
@@ -110,27 +156,61 @@ function Subscription() {
         </div>
       </div>
       
-      {subscriptions.length > 0 && (
-        <div className="card">
-          <h2>Мои абонементы</h2>
-          <ul className="schedule-list">
-            {subscriptions.map((sub, index) => (
-              <li key={index} className="schedule-item">
-                <div className="schedule-info">
-                  <span className="schedule-group">{sub.type}</span>
+      <div className="my-subscriptions">
+        <h2>Мои абонементы</h2>
+        {loading ? (
+          <div className="loading">Загрузка абонементов...</div>
+        ) : subscriptions.length > 0 ? (
+          <div className="subscriptions-list">
+            {subscriptions.map(sub => (
+              <div key={sub.id} className={`subscription-item ${sub.active ? 'active' : 'expired'}`}>
+                <div className="subscription-header">
+                  <h3>{sub.description || getSubscriptionName(sub.type)}</h3>
+                  <span className={`status-badge ${sub.active ? 'active' : 'expired'}`}>
+                    {sub.active ? 'Активен' : 'Истек'}
+                  </span>
                 </div>
-                <span className="schedule-time">
-                  {new Date(sub.start_date).toLocaleDateString()} - {' '}
-                  {new Date(sub.end_date).toLocaleDateString()}
-                </span>
-                <span className="schedule-coach">{sub.price} ₽</span>
-              </li>
+                <div className="subscription-details">
+                  <div className="detail">
+                    <span className="label">Начало:</span>
+                    <span className="value">{new Date(sub.start_date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="detail">
+                    <span className="label">Окончание:</span>
+                    <span className="value">{new Date(sub.end_date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="detail">
+                    <span className="label">Стоимость:</span>
+                    <span className="value">{sub.price} ₽</span>
+                  </div>
+                </div>
+              </div>
             ))}
-          </ul>
-        </div>
-      )}
-    </>
+          </div>
+        ) : (
+          <div className="no-subscriptions">
+            У вас пока нет оформленных абонементов
+          </div>
+        )}
+      </div>
+    </div>
   );
+}
+
+// Вспомогательная функция для получения названия абонемента по его типу
+function getSubscriptionName(type) {
+  switch (type) {
+    case 'single':
+      return 'Разовое посещение';
+    case 'monthly':
+      return 'Месячный абонемент';
+    case 'quarterly':
+      return 'Квартальный абонемент';
+    case 'annual':
+      return 'Годовой абонемент';
+    default:
+      return 'Абонемент';
+  }
 }
 
 export default Subscription;

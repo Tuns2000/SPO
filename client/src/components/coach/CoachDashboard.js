@@ -1,282 +1,525 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import './Coach.css';
+import { useNavigate } from 'react-router-dom';
+import '../../styles/CoachDashboard.css';
 
-const CoachDashboard = () => {
-  const [groups, setGroups] = useState([]);
-  const [schedule, setSchedule] = useState([]);
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [groupMembers, setGroupMembers] = useState([]);
+function CoachDashboard() {
+  // Состояния
+  const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [profileData, setProfileData] = useState(null);
+  
+  // Формы
+  const [profileForm, setProfileForm] = useState({
+    specialty: '',
+    experience: '',
+    description: ''
+  });
+  
+  const [groupForm, setGroupForm] = useState({
+    name: '',
+    capacity: 10,
+    description: ''
+  });
+  
+  // Данные групп
+  const [groups, setGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [groupMembers, setGroupMembers] = useState([]);
+  const [showMembers, setShowMembers] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
   
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
-  const role = localStorage.getItem('role');
-  
-  // Проверка авторизации и роли
+
+  // Загрузка данных при монтировании компонента
   useEffect(() => {
     if (!token) {
-      navigate('/login', { state: { redirectTo: '/coach' } });
+      navigate('/login');
       return;
     }
     
-    if (role !== 'coach') {
-      navigate('/');
-      return;
-    }
-  }, [token, role, navigate]);
-  
-  // Получение информации о группах тренера
-  useEffect(() => {
-    if (!token || role !== 'coach') return;
-    
-    const fetchData = async () => {
-      try {
-        // Загрузка групп тренера
-        const groupsResponse = await axios.get('http://localhost:3000/api/coach/my/groups', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        setGroups(groupsResponse.data);
-        
-        // Если есть группы, выбираем первую и загружаем её участников
-        if (groupsResponse.data.length > 0) {
-          setSelectedGroup(groupsResponse.data[0].id);
-          
-          const membersResponse = await axios.get(`http://localhost:3000/api/group/${groupsResponse.data[0].id}/members`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          setGroupMembers(membersResponse.data);
-        }
-        
-        // Загрузка расписания тренера
-        const scheduleResponse = await axios.get('http://localhost:3000/api/coach/my/schedule', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        setSchedule(scheduleResponse.data);
-        setLoading(false);
-      } catch (err) {
-        console.error('Ошибка при загрузке данных тренера:', err);
-        setError(err.response?.data?.error || 'Ошибка при загрузке данных');
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, [token, role]);
-  
-  // Загрузка участников выбранной группы
-  const handleGroupChange = async (e) => {
-    const groupId = e.target.value;
-    setSelectedGroup(groupId);
-    
+    loadCoachProfile();
+  }, [token, navigate]);
+
+  // Загрузка профиля тренера
+  const loadCoachProfile = async () => {
     try {
-      const response = await axios.get(`http://localhost:3000/api/group/${groupId}/members`, {
+      setLoading(true);
+      console.log('Загрузка профиля тренера...');
+      
+      const response = await axios.get('http://localhost:3000/api/coach/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('Получен ответ:', response.data);
+      setProfileData(response.data);
+      
+      if (response.data.groups) {
+        setGroups(response.data.groups);
+      }
+      
+      // Заполняем форму данными тренера
+      if (response.data.coach_info) {
+        setProfileForm({
+          specialty: response.data.coach_info?.specialty || '',
+          experience: response.data.coach_info?.experience || '',
+          description: response.data.coach_info?.description || ''
+        });
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Ошибка при загрузке профиля тренера:', err);
+      
+      if (err.response && err.response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setError('Не удалось загрузить данные тренера');
+      }
+      
+      setLoading(false);
+    }
+  };
+
+  // Загрузка групп
+  const loadGroups = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await axios.get('http://localhost:3000/api/coach/groups', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setGroups(response.data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Ошибка при загрузке групп:', err);
+      setError('Не удалось загрузить группы');
+      setLoading(false);
+    }
+  };
+
+  // Загрузка участников группы
+  const loadGroupMembers = async (groupId) => {
+    try {
+      setLoading(true);
+      
+      const response = await axios.get(`http://localhost:3000/api/coach/groups/${groupId}/members`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       setGroupMembers(response.data);
+      setSelectedGroupId(groupId);
+      setShowMembers(true);
+      setLoading(false);
     } catch (err) {
       console.error('Ошибка при загрузке участников группы:', err);
+      alert('Не удалось загрузить список участников');
+      setLoading(false);
     }
   };
-  
-  // Обновление статуса занятия
-  const updateClassStatus = async (scheduleId, newStatus) => {
+
+  // Удаление участника из группы
+  const handleRemoveMember = async (groupId, memberId, memberName) => {
+    if (!window.confirm(`Вы действительно хотите удалить ${memberName} из группы?`)) {
+      return;
+    }
+    
     try {
-      await axios.put(
-        `http://localhost:3000/api/schedule/${scheduleId}`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.delete(`http://localhost:3000/api/coach/groups/${groupId}/members/${memberId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
-      // Обновляем локальное состояние расписания
-      setSchedule(prevSchedule => prevSchedule.map(item => 
-        item.id === scheduleId ? {...item, status: newStatus} : item
-      ));
+      alert('Участник успешно удален из группы');
+      // Обновляем список участников
+      loadGroupMembers(groupId);
     } catch (err) {
-      console.error('Ошибка при обновлении статуса занятия:', err);
-      alert('Не удалось обновить статус занятия');
+      console.error('Ошибка при удалении участника:', err);
+      alert('Не удалось удалить участника из группы');
     }
   };
-  
-  if (!token || role !== 'coach') {
-    return null; // Перенаправление выполняется в useEffect
-  }
-  
-  if (loading) {
-    return (
-      <div className="coach-container">
-        <h2>Панель тренера</h2>
-        <p>Загрузка данных...</p>
-      </div>
-    );
-  }
-  
-  // Сортировка занятий по дате
-  const sortedSchedule = [...schedule].sort((a, b) => {
-    const dateA = new Date(a.date + 'T' + a.time);
-    const dateB = new Date(b.date + 'T' + b.time);
-    return dateA - dateB;
-  });
-  
-  return (
-    <div className="coach-container">
-      <h2>Панель тренера</h2>
+
+  // Возврат к списку групп
+  const handleBackToGroups = () => {
+    setShowMembers(false);
+    setSelectedGroupId(null);
+  };
+
+  // Обработчики изменения форм
+  const handleProfileInputChange = (e) => {
+    const { name, value } = e.target;
+    setProfileForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleGroupInputChange = (e) => {
+    const { name, value } = e.target;
+    setGroupForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Обновление профиля
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      await axios.put('http://localhost:3000/api/coach/profile', profileForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
-      <div className="coach-sections">
-        {/* Секция групп тренера */}
-        <div className="coach-section">
-          <h3>Мои группы</h3>
+      alert('Профиль тренера успешно обновлен');
+      loadCoachProfile();
+    } catch (err) {
+      console.error('Ошибка при обновлении профиля:', err);
+      alert('Не удалось обновить профиль');
+    }
+  };
+
+  // Создание новой группы
+  const handleCreateGroup = async (e) => {
+    e.preventDefault();
+    
+    try {
+      await axios.post('http://localhost:3000/api/coach/groups', groupForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      alert('Группа успешно создана');
+      loadGroups();
+      setGroupForm({ name: '', capacity: 10, description: '' });
+    } catch (err) {
+      console.error('Ошибка при создании группы:', err);
+      alert('Не удалось создать группу');
+    }
+  };
+
+  // Выбор группы для редактирования
+  const selectGroup = (group) => {
+    setSelectedGroup(group);
+    setGroupForm({
+      name: group.name,
+      capacity: group.capacity,
+      description: group.description || ''
+    });
+  };
+
+  // Убедитесь, что ID группы передается корректно
+  const handleUpdateGroup = async (e) => {
+    e.preventDefault();
+    if (!selectedGroup || !selectedGroup.id) {
+      console.error('ID группы отсутствует');
+      return;
+    }
+    
+    console.log('Обновление группы с ID:', selectedGroup.id);
+    
+    try {
+      await axios.put(`http://localhost:3000/api/coach/groups/${selectedGroup.id}`, groupForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      alert('Информация о группе обновлена');
+      loadGroups();
+      setSelectedGroup(null);
+    } catch (err) {
+      console.error('Ошибка при обновлении группы:', err);
+      alert('Не удалось обновить группу');
+    }
+  };
+
+  // Удаление группы
+  const handleDeleteGroup = async (id) => {
+    if (!window.confirm('Вы уверены, что хотите удалить эту группу?')) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`http://localhost:3000/api/coach/groups/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      alert('Группа успешно удалена');
+      loadGroups();
+      if (selectedGroup && selectedGroup.id === id) {
+        setSelectedGroup(null);
+        setGroupForm({ name: '', capacity: 10, description: '' });
+      }
+    } catch (err) {
+      console.error('Ошибка при удалении группы:', err);
+      alert('Не удалось удалить группу');
+    }
+  };
+
+  if (loading && !profileData) {
+    return <div className="loading">Загрузка данных тренера...</div>;
+  }
+  
+  if (error) {
+    return <div className="error-message">{error}</div>;
+  }
+
+  return (
+    <div className="coach-dashboard">
+      <h1>Панель управления тренера</h1>
+      
+      <div className="dashboard-tabs">
+        <button 
+          className={activeTab === 'profile' ? 'tab-button active' : 'tab-button'} 
+          onClick={() => setActiveTab('profile')}
+        >
+          Профиль
+        </button>
+        <button 
+          className={activeTab === 'groups' ? 'tab-button active' : 'tab-button'} 
+          onClick={() => { 
+            setActiveTab('groups'); 
+            loadGroups(); 
+          }}
+        >
+          Мои группы
+        </button>
+        <button 
+          className={activeTab === 'create-group' ? 'tab-button active' : 'tab-button'} 
+          onClick={() => setActiveTab('create-group')}
+        >
+          Создать группу
+        </button>
+      </div>
+      
+      {/* Вкладка профиля */}
+      {activeTab === 'profile' && profileData && (
+        <div className="profile-section">
+          <div className="coach-profile">
+            <h2>Информация о тренере</h2>
+            <div className="profile-info">
+              <p><strong>Имя:</strong> {profileData.user?.name}</p>
+              <p><strong>Email:</strong> {profileData.user?.email}</p>
+              <p><strong>Специализация:</strong> {profileData.coach_info?.specialty || 'Не указана'}</p>
+              <p><strong>Опыт работы:</strong> {profileData.coach_info?.experience || 0} лет</p>
+              <p><strong>Рейтинг:</strong> {profileData.coach_info?.rating || 0}/5</p>
+              <p><strong>Описание:</strong> {profileData.coach_info?.description || 'Информация отсутствует'}</p>
+            </div>
+          </div>
           
-          {groups.length > 0 ? (
-            <>
-              <div className="coach-stats">
-                <div className="coach-stat-card">
-                  <div className="coach-stat-value">{groups.length}</div>
-                  <div className="coach-stat-label">Всего групп</div>
-                </div>
-                <div className="coach-stat-card">
-                  <div className="coach-stat-value">
-                    {groups.reduce((sum, group) => sum + Number(group.enrolled_count), 0)}
-                  </div>
-                  <div className="coach-stat-label">Всего учеников</div>
-                </div>
-                <div className="coach-stat-card">
-                  <div className="coach-stat-value">
-                    {sortedSchedule.filter(s => 
-                      new Date(s.date + 'T' + s.time) >= new Date() && 
-                      s.status === 'scheduled'
-                    ).length}
-                  </div>
-                  <div className="coach-stat-label">Предстоящих занятий</div>
-                </div>
+          <div className="coach-form">
+            <h2>Редактировать профиль</h2>
+            <form onSubmit={handleProfileSubmit}>
+              <div className="form-group">
+                <label>Специализация</label>
+                <input
+                  type="text"
+                  name="specialty"
+                  value={profileForm.specialty}
+                  onChange={handleProfileInputChange}
+                  placeholder="Укажите специализацию"
+                />
               </div>
               
-              {/* Выбор группы для отображения участников */}
-              <div className="group-selector">
-                <label htmlFor="group-select">Выберите группу:</label>
-                <select 
-                  id="group-select" 
-                  value={selectedGroup || ''}
-                  onChange={handleGroupChange}
-                >
-                  {groups.map(group => (
-                    <option key={group.id} value={group.id}>
-                      {group.name} ({group.enrolled_count}/{group.capacity})
-                    </option>
+              <div className="form-group">
+                <label>Опыт работы (лет)</label>
+                <input
+                  type="number"
+                  name="experience"
+                  value={profileForm.experience}
+                  onChange={handleProfileInputChange}
+                  min="0"
+                  placeholder="Укажите опыт работы"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>О себе</label>
+                <textarea
+                  name="description"
+                  value={profileForm.description}
+                  onChange={handleProfileInputChange}
+                  placeholder="Расскажите о своем опыте и подходе к тренировкам"
+                  rows="5"
+                ></textarea>
+              </div>
+              
+              <button type="submit" className="submit-btn">Сохранить изменения</button>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Вкладка с группами */}
+      {activeTab === 'groups' && (
+        <div className="groups-section">
+          <h2>Мои группы</h2>
+          
+          {showMembers ? (
+            <div className="group-members-section">
+              <h3>Участники группы</h3>
+              <button onClick={handleBackToGroups} className="back-btn">Назад к группам</button>
+              {groupMembers.length === 0 ? (
+                <p>В этой группе пока нет участников.</p>
+              ) : (
+                <ul className="members-list">
+                  {groupMembers.map(member => (
+                    <li key={member.id} className="member-item">
+                      <span>{member.name}</span>
+                      <button 
+                        className="remove-btn" 
+                        onClick={() => handleRemoveMember(selectedGroupId, member.id, member.name)}
+                      >
+                        Удалить
+                      </button>
+                    </li>
                   ))}
-                </select>
-              </div>
-              
-              {/* Список участников выбранной группы */}
-              {selectedGroup && (
-                <div className="group-members">
-                  <h4>Участники группы</h4>
-                  {groupMembers.length > 0 ? (
-                    <table className="coach-table">
-                      <thead>
-                        <tr>
-                          <th>Имя</th>
-                          <th>Email</th>
-                          <th>Дата записи</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {groupMembers.map((member, index) => (
-                          <tr key={index}>
-                            <td>{member.name}</td>
-                            <td>{member.email}</td>
-                            <td>{new Date(member.enrollment_date).toLocaleDateString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <p className="empty-message">В этой группе пока нет участников.</p>
-                  )}
+                </ul>
+              )}
+            </div>
+          ) : groups.length === 0 ? (
+            <div className="no-groups">
+              <p>У вас пока нет созданных групп.</p>
+              <button onClick={() => setActiveTab('create-group')} className="submit-btn">
+                Создать новую группу
+              </button>
+            </div>
+          ) : (
+            <div className="groups-wrapper">
+              {selectedGroup ? (
+                <div className="group-details">
+                  <h3>Редактирование группы</h3>
+                  <form onSubmit={handleUpdateGroup}>
+                    <div className="form-group">
+                      <label>Название группы</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={groupForm.name}
+                        onChange={handleGroupInputChange}
+                        placeholder="Название группы"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>Вместимость</label>
+                      <input
+                        type="number"
+                        name="capacity"
+                        value={groupForm.capacity}
+                        onChange={handleGroupInputChange}
+                        min="1"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>Описание</label>
+                      <textarea
+                        name="description"
+                        value={groupForm.description}
+                        onChange={handleGroupInputChange}
+                        placeholder="Описание группы"
+                        rows="3"
+                      ></textarea>
+                    </div>
+                    
+                    <div className="form-buttons">
+                      <button type="submit" className="submit-btn">Сохранить</button>
+                      <button 
+                        type="button" 
+                        onClick={() => setSelectedGroup(null)}
+                        className="cancel-btn"
+                      >
+                        Отмена
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => handleDeleteGroup(selectedGroup.id)}
+                        className="delete-btn"
+                      >
+                        Удалить группу
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <div className="groups-list">
+                  {groups.map(group => (
+                    <div key={group.id} className="group-item">
+                      <h3>{group.name}</h3>
+                      <p>{group.description || 'Нет описания'}</p>
+                      <div className="group-meta">
+                        <span>Вместимость: {group.capacity}</span>
+                        {group.enrolled_count !== undefined && (
+                          <span>Участники: {group.enrolled_count}/{group.capacity}</span>
+                        )}
+                      </div>
+                      <button 
+                        className="edit-btn" 
+                        onClick={() => selectGroup(group)}
+                      >
+                        Редактировать
+                      </button>
+                      <button 
+                        className="view-members-btn" 
+                        onClick={() => loadGroupMembers(group.id)}
+                      >
+                        Просмотреть участников
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
-            </>
-          ) : (
-            <p className="empty-message">У вас пока нет групп.</p>
+            </div>
           )}
         </div>
-        
-        {/* Секция расписания занятий */}
-        <div className="coach-section">
-          <h3>Расписание занятий</h3>
-          
-          {sortedSchedule.length > 0 ? (
-            <table className="coach-table">
-              <thead>
-                <tr>
-                  <th>Дата</th>
-                  <th>Время</th>
-                  <th>Группа</th>
-                  <th>Статус</th>
-                  <th>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedSchedule.map((item, index) => {
-                  const classDate = new Date(item.date + 'T' + item.time);
-                  const isPast = classDate < new Date();
-                  
-                  return (
-                    <tr key={index} className={isPast ? 'past-class' : ''}>
-                      <td>{new Date(item.date).toLocaleDateString()}</td>
-                      <td>{item.time.slice(0, 5)}</td>
-                      <td>{item.group_name}</td>
-                      <td>
-                        <span className={`status-badge status-${item.status}`}>
-                          {item.status === 'scheduled' ? 'Запланировано' : 
-                           item.status === 'completed' ? 'Проведено' : 
-                           item.status === 'cancelled' ? 'Отменено' : item.status}
-                        </span>
-                      </td>
-                      <td className="action-buttons">
-                        {!isPast && item.status === 'scheduled' && (
-                          <>
-                            <button 
-                              onClick={() => updateClassStatus(item.id, 'completed')}
-                              className="btn btn-success"
-                            >
-                              Провести
-                            </button>
-                            <button 
-                              onClick={() => updateClassStatus(item.id, 'cancelled')}
-                              className="btn btn-danger"
-                            >
-                              Отменить
-                            </button>
-                          </>
-                        )}
-                        {isPast && item.status === 'scheduled' && (
-                          <button 
-                            onClick={() => updateClassStatus(item.id, 'completed')}
-                            className="btn btn-success"
-                          >
-                            Отметить как проведенное
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          ) : (
-            <p className="empty-message">У вас пока нет запланированных занятий.</p>
-          )}
+      )}
+      
+      {/* Вкладка создания группы */}
+      {activeTab === 'create-group' && (
+        <div className="create-group-section">
+          <h2>Создать новую группу</h2>
+          <form onSubmit={handleCreateGroup}>
+            <div className="form-group">
+              <label>Название группы</label>
+              <input
+                type="text"
+                name="name"
+                value={groupForm.name}
+                onChange={handleGroupInputChange}
+                placeholder="Введите название группы"
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Вместимость</label>
+              <input
+                type="number"
+                name="capacity"
+                value={groupForm.capacity}
+                onChange={handleGroupInputChange}
+                min="1"
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Описание</label>
+              <textarea
+                name="description"
+                value={groupForm.description}
+                onChange={handleGroupInputChange}
+                placeholder="Расскажите о группе"
+                rows="5"
+              ></textarea>
+            </div>
+            
+            <button type="submit" className="submit-btn">Создать группу</button>
+          </form>
         </div>
-      </div>
+      )}
     </div>
   );
-};
+}
 
 export default CoachDashboard;

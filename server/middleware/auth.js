@@ -11,15 +11,28 @@ module.exports = (req, res, next) => {
     
     const token = authHeader.split(' ')[1];
     
-    // Верифицируем токен
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'BOMBA');
-    
-    // Добавляем информацию о пользователе в объект запроса
-    req.user = decoded;
-    
-    next();
+    try {
+      // Верифицируем токен
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'BOMBA');
+      
+      // Добавляем информацию о пользователе в объект запроса
+      req.user = decoded;
+      
+      next();
+    } catch (err) {
+      // Отдельно обрабатываем ошибку истекшего токена
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ 
+          error: 'Срок действия токена истек. Пожалуйста, войдите в систему заново',
+          tokenExpired: true
+        });
+      }
+      
+      // Другие ошибки токена
+      return res.status(401).json({ error: 'Неверный токен авторизации' });
+    }
   } catch (err) {
     console.error('Ошибка аутентификации:', err);
-    return res.status(401).json({ error: 'Неверный токен авторизации' });
+    return res.status(500).json({ error: 'Внутренняя ошибка сервера при проверке аутентификации' });
   }
 };
