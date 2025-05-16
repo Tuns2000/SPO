@@ -219,7 +219,6 @@ function Profile() {
                     <div className="enrollment-group">{enrollment.group_name}</div>
                     <div className="enrollment-details">
                       <span>Тренер: {enrollment.coach_name}</span>
-                      <span>Дата записи: {new Date(enrollment.enrollment_date).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <Link to={`/groups/${enrollment.group_id}`} className="enrollment-view-button">

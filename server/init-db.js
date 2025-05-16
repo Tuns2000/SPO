@@ -71,6 +71,19 @@ async function initDB() {
       );
     `);
 
+    // Создание таблицы уведомлений, если еще не создана
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_read BOOLEAN DEFAULT false
+      );
+    `);
+
     console.log('База данных успешно инициализирована');
 
     // Добавляем тестовые данные для расписания

@@ -69,6 +69,42 @@ const GroupDetail = () => {
     }
   };
 
+  const handleEnroll = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await axios.post(`http://localhost:3000/api/group/${groupId}/enroll`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      alert('Вы успешно записались в группу');
+      loadGroupDetails(); // Перезагрузить информацию о группе
+      
+    } catch (err) {
+      console.error('Ошибка при записи в группу:', err);
+      
+      if (err.response) {
+        const errorCode = err.response.data.errorCode;
+        
+        if (errorCode === 'REMOVED_BY_COACH') {
+          alert('Вы не можете записаться в эту группу, так как были исключены тренером');
+        } else if (errorCode === 'NO_SUBSCRIPTION') {
+          alert('Для записи в группу требуется активный абонемент');
+        } else if (errorCode === 'ALREADY_ENROLLED') {
+          alert('Вы уже записаны в эту группу');
+        } else if (errorCode === 'NO_CAPACITY') {
+          alert('В группе нет свободных мест');
+        } else {
+          alert('Ошибка при записи в группу: ' + (err.response.data.error || 'Неизвестная ошибка'));
+        }
+      } else {
+        alert('Ошибка при записи в группу');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="group-detail-container">

@@ -108,56 +108,104 @@ router.post('/:id/enroll', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const groupId = req.params.id;
     
-    // Проверяем, есть ли у пользователя активный абонемент
-    const subscriptionResult = await db.query(
-      `SELECT id FROM subscriptions 
-       WHERE user_id = $1 AND active = TRUE AND end_date >= CURRENT_DATE`,
+    // Проверяем, есть ли у пользователя абонемент
+    const subscriptionCheck = await db.query(
+      `SELECT * FROM subscriptions 
+       WHERE user_id = $1 AND active = true AND end_date > CURRENT_TIMESTAMP`,
       [userId]
     );
     
-    if (subscriptionResult.rows.length === 0) {
-      return res.status(400).json({ 
-        error: 'Для записи в группу необходим активный абонемент'
+    if (subscriptionCheck.rows.length === 0) {
+      return res.status(403).json({ 
+        error: 'У вас нет активного абонемента', 
+        errorCode: 'NO_SUBSCRIPTION' 
       });
     }
     
-    // Проверяем, есть ли свободные места в группе
-    const groupResult = await db.query(
-      `SELECT g.capacity, COUNT(ge.user_id) as enrolled_count
-       FROM groups g
-       LEFT JOIN group_enrollments ge ON g.id = ge.group_id
-       WHERE g.id = $1
-       GROUP BY g.capacity`,
-      [groupId]
+    // Проверяем, существует ли группа
+    const groupCheck = await db.query('SELECT * FROM groups WHERE id = $1', [groupId]);
+    
+    if (groupCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Группа не найдена', 
+        errorCode: 'GROUP_NOT_FOUND' 
+      });
+    }
+    
+    // Проверяем, не исключен ли пользователь тренером
+    const removedCheck = await db.query(
+      `SELECT * FROM group_enrollments 
+       WHERE user_id = $1 AND group_id = $2 AND status = 'removed_by_coach'`,
+      [userId, groupId]
     );
     
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Группа не найдена' });
+    if (removedCheck.rows.length > 0) {
+      return res.status(403).json({ 
+        error: 'Вы не можете записаться в эту группу, так как были исключены тренером', 
+        errorCode: 'REMOVED_BY_COACH' 
+      });
     }
     
-    const { capacity, enrolled_count } = groupResult.rows[0];
-    
-    if (parseInt(enrolled_count) >= parseInt(capacity)) {
-      return res.status(400).json({ error: 'Группа уже заполнена' });
-    }
-    
-    // Проверяем, не записан ли пользователь уже в эту группу
+    // Проверяем, не записан ли пользователь уже
     const enrollmentCheck = await db.query(
-      'SELECT id FROM group_enrollments WHERE user_id = $1 AND group_id = $2',
+      `SELECT * FROM group_enrollments 
+       WHERE user_id = $1 AND group_id = $2 AND status = 'active'`,
       [userId, groupId]
     );
     
     if (enrollmentCheck.rows.length > 0) {
-      return res.status(400).json({ error: 'Вы уже записаны в эту группу' });
+      return res.status(400).json({ 
+        error: 'Вы уже записаны в эту группу', 
+        errorCode: 'ALREADY_ENROLLED' 
+      });
     }
     
-    // Записываем пользователя в группу
-    await db.query(
-      'INSERT INTO group_enrollments (user_id, group_id, enrollment_date) VALUES ($1, $2, CURRENT_DATE)',
+    // Проверяем, есть ли места в группе
+    const capacityCheck = await db.query(
+      `SELECT g.capacity, COUNT(ge.id) as enrolled_count
+       FROM groups g
+       LEFT JOIN group_enrollments ge ON g.id = ge.group_id AND ge.status = 'active'
+       WHERE g.id = $1
+       GROUP BY g.id, g.capacity`,
+      [groupId]
+    );
+    
+    if (capacityCheck.rows.length > 0) {
+      const { capacity, enrolled_count } = capacityCheck.rows[0];
+      if (enrolled_count >= capacity) {
+        return res.status(400).json({ 
+          error: 'В группе нет свободных мест', 
+          errorCode: 'NO_CAPACITY' 
+        });
+      }
+    }
+    
+    // Проверяем, есть ли предыдущая запись (отмененная самим пользователем)
+    const previousEnrollment = await db.query(
+      `SELECT id FROM group_enrollments 
+       WHERE user_id = $1 AND group_id = $2 AND status = 'cancelled'`,
       [userId, groupId]
     );
     
-    res.status(201).json({ message: 'Вы успешно записаны в группу' });
+    if (previousEnrollment.rows.length > 0) {
+      // Если пользователь сам отменил запись ранее, активируем её
+      await db.query(
+        `UPDATE group_enrollments 
+         SET status = 'active', enrollment_date = CURRENT_DATE 
+         WHERE id = $1`,
+        [previousEnrollment.rows[0].id]
+      );
+    } else {
+      // Создаем новую запись
+      await db.query(
+        `INSERT INTO group_enrollments (user_id, group_id, status) 
+         VALUES ($1, $2, 'active')`,
+        [userId, groupId]
+      );
+    }
+    
+    res.json({ message: 'Вы успешно записаны в группу' });
+    
   } catch (err) {
     console.error('Ошибка при записи в группу:', err);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });

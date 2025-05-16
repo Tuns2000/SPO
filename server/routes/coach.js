@@ -437,11 +437,28 @@ router.delete('/groups/:groupId/members/:memberId', auth, async (req, res) => {
       return res.status(404).json({ error: 'Группа не найдена или вы не являетесь ее тренером' });
     }
     
-    // Удаляем участника из группы (или изменяем статус на неактивный)
+    // Изменение: устанавливаем статус "removed_by_coach" вместо "cancelled"
     await pool.query(
-      `UPDATE group_enrollments SET status = 'cancelled' 
+      `UPDATE group_enrollments 
+       SET status = 'removed_by_coach' 
        WHERE group_id = $1 AND user_id = $2`,
       [groupId, memberId]
+    );
+    
+    // Добавляем уведомление пользователю
+    const groupNameResult = await pool.query('SELECT name FROM groups WHERE id = $1', [groupId]);
+    const groupName = groupNameResult.rows.length > 0 ? groupNameResult.rows[0].name : 'группы';
+    
+    await pool.query(
+      `INSERT INTO notifications 
+       (user_id, title, message, type) 
+       VALUES ($1, $2, $3, $4)`,
+      [
+        memberId, 
+        'Вы исключены из группы', 
+        `Тренер исключил вас из группы "${groupName}"`,
+        'group_removed'
+      ]
     );
     
     res.json({ message: 'Участник успешно удален из группы' });

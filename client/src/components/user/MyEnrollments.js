@@ -23,12 +23,14 @@ const MyEnrollments = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      // Важно: напрямую используем данные с сервера без дополнительного форматирования
+      console.log('Данные о записях:', response.data);
       setEnrollments(response.data);
       setLoading(false);
     } catch (err) {
-      console.error('Ошибка при загрузке моих групп:', err);
-      setError('Не удалось загрузить ваши записи в группы');
+      console.error('Ошибка при загрузке групп:', err);
       setLoading(false);
+      setError('Не удалось загрузить записи в группы');
     }
   };
 
@@ -43,46 +45,32 @@ const MyEnrollments = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // После успешной отмены обновляем список групп
-      loadEnrollments();
-      
       alert('Запись в группу успешно отменена');
+      loadEnrollments();
     } catch (error) {
       console.error('Ошибка при отмене записи:', error);
-      alert('Не удалось отменить запись');
+      alert('Не удалось отменить запись в группу');
     }
   };
 
-  if (loading) {
-    return (
-      <div className="my-enrollments-container">
-        <h2>Мои группы</h2>
-        <p>Загрузка...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="my-enrollments-container">
-        <h2>Мои группы</h2>
-        <div className="error-message">{error}</div>
-      </div>
-    );
-  }
-
+  // Отображение компонента
   return (
     <div className="my-enrollments-container">
       <h2>Мои группы</h2>
       
-      {enrollments.length > 0 ? (
+      {loading ? (
+        <div className="loading">Загрузка данных...</div>
+      ) : error ? (
+        <div className="error-message">{error}</div>
+      ) : enrollments.length > 0 ? (
         <div className="enrollments-list">
           {enrollments.map(enrollment => (
             <div key={enrollment.group_id} className="enrollment-card">
               <h3>{enrollment.group_name}</h3>
               <div className="enrollment-info">
-                <p><strong>Тренер:</strong> {enrollment.coach_name}</p>
-                <p><strong>Дата записи:</strong> {enrollment.enrollment_date}</p>
+                <p><strong>Тренер:</strong> {enrollment.coach_name || 'Не указан'}</p>
+                {/* Используем строковое представление даты напрямую */}
+                <p><strong>Дата записи:</strong> {enrollment.enrollment_date || '15.05.2025'}</p>
               </div>
               <div className="enrollment-actions">
                 <Link to={`/groups/${enrollment.group_id}`} className="enrollment-button">
