@@ -18,6 +18,18 @@ import './components/groups/Group.css';
 
 import './styles/App.css';
 
+// Замените текущие импорты:
+
+// Было:
+// import AdminSchedule from './components/admin/Schedule/AdminSchedule';
+// import AdminGroups from './components/admin/Groups/AdminGroups';
+// import AdminCoaches from './components/admin/Coaches/AdminCoaches';
+
+// Стало:
+import AdminSchedule from './components/admin/schedule/schedule';
+import AdminGroups from './components/admin/groups/groups';
+import AdminCoaches from './components/admin/coaches/coaches';
+
 function App() {
   const username = localStorage.getItem('user');
   const token = localStorage.getItem('token');
@@ -140,6 +152,9 @@ function App() {
           <>
             <Route path="/pools/:id/edit" element={<EditPool />} />
             <Route path="/pools/:id/add-group" element={<AddGroupToPool />} />
+            <Route path="/admin/schedule" element={<AdminSchedule />} />
+            <Route path="/admin/groups" element={<AdminGroups />} />
+            <Route path="/admin/coaches" element={<AdminCoaches />} />
           </>
         )}
       </Routes>

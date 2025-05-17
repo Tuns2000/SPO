@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const auth = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth'); // Импортируем verifyToken вместо всего модуля
+
+// Создаем алиас для совместимости с существующим кодом
+const authMiddleware = verifyToken;
 
 // Обновляем маршрут для получения записей пользователя с информацией о бассейне
-router.get('/enrollments', auth, async (req, res) => {
+router.get('/enrollments', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     
@@ -32,8 +35,8 @@ router.get('/enrollments', auth, async (req, res) => {
   }
 });
 
-// Добавьте маршрут для отмены записи
-router.delete('/enrollments/:groupId', auth, async (req, res) => {
+// Добавьте маршрут для отмены записи - также используем authMiddleware
+router.delete('/enrollments/:groupId', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const groupId = req.params.groupId;

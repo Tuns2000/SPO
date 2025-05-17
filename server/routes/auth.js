@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../models/database');
 const pool = require('../db');
-const auth = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');  // Изменено здесь
 
 const JWT_SECRET = process.env.JWT_SECRET || 'BOMBA';
 
@@ -104,7 +104,7 @@ router.post('/login', async (req, res) => {
 });
 
 // Получение профиля пользователя
-router.get('/profile', auth, async (req, res) => {
+router.get('/profile', verifyToken, async (req, res) => {  // Изменено здесь
   try {
     const userId = req.user.id;
     console.log('Запрос профиля для пользователя ID:', userId);

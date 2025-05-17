@@ -1,0 +1,95 @@
+.admin-subscriptions {
+  padding: 20px;
+}
+
+.admin-subscriptions h2 {
+  color: #0277bd;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e3f2fd;
+  padding-bottom: 10px;
+}
+
+.subscriptions-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.subscriptions-list th, .subscriptions-list td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.subscriptions-list th {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.subscriptions-list tr:hover {
+  background-color: #f9f9f9;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status-active {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-expired {
+  background-color: #fff8e1;
+  color: #ff8f00;
+}
+
+.status-cancelled {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.edit-btn, .delete-btn {
+  padding: 6px 12px;
+  margin-right: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.edit-btn {
+  background-color: #2196f3;
+  color: white;
+}
+
+.edit-btn:hover {
+  background-color: #0d8bf2;
+}
+
+.delete-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.delete-btn:hover {
+  background-color: #e53935;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 18px;
+  color: #777;
+}
+
+.error-message {
+  padding: 15px;
+  background-color: #ffebee;
+  color: #d32f2f;
+  border-radius: 4px;
+}

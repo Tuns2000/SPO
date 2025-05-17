@@ -1,10 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const auth = require('../middleware/auth');
+// Исправляем импорт - получаем функцию verifyToken вместо объекта auth
+const { verifyToken } = require('../middleware/auth');
+
+// Создаем псевдоним для совместимости с существующим кодом
+const authMiddleware = verifyToken;
 
 // Получение всех уведомлений пользователя
-router.get('/my', auth, async (req, res) => {
+router.get('/my', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     
@@ -24,7 +28,7 @@ router.get('/my', auth, async (req, res) => {
 });
 
 // Маршрут для отметки уведомления как прочитанное
-router.put('/:id/read', auth, async (req, res) => {
+router.put('/:id/read', authMiddleware, async (req, res) => {
   try {
     const notificationId = req.params.id;
     const userId = req.user.id;

@@ -1,0 +1,46 @@
+.admin-coaches {
+  padding: 20px;
+}
+
+.admin-coaches table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.admin-coaches th, .admin-coaches td {
+  border: 1px solid #ddd;
+  padding: 12px;
+  text-align: left;
+}
+
+.admin-coaches th {
+  background-color: #f0f8ff;
+  font-weight: 600;
+}
+
+.admin-coaches .add-btn {
+  background-color: #4CAF50;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.admin-coaches .edit-btn, .admin-coaches .delete-btn {
+  padding: 6px 10px;
+  margin: 0 5px;
+  cursor: pointer;
+  border: none;
+}
+
+.admin-coaches .edit-btn {
+  background-color: #2196F3;
+  color: white;
+}
+
+.admin-coaches .delete-btn {
+  background-color: #f44336;
+  color: white;
+}

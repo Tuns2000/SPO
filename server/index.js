@@ -61,7 +61,8 @@ app.use('/api/notification', require('./routes/notification'));
 app.use('/api/coach', require('./routes/coach'));
 app.use('/api/schedule', require('./routes/schedule'));
 app.use('/api/pools', require('./routes/pool'));
-app.use('/api/admin', require('./routes/admin')); // Добавлено новое подключение маршрута
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes); // Добавлено новое подключение маршрута
 
 // Маршрут для проверки работоспособности сервера
 app.get('/api/health', (req, res) => {

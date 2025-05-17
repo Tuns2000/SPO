@@ -10,6 +10,7 @@ function Profile() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -24,17 +25,40 @@ function Profile() {
     
     const fetchUserData = async () => {
       try {
+        setLoading(true);
+        setError(null);
+
+        // Делаем запрос на получение всех абонементов пользователя
+        const subscriptionsResponse = await axios.get('http://localhost:3000/api/subscription/my', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        // Проверяем, есть ли активные абонементы
+        const subscriptions = subscriptionsResponse.data;
+        
+        // Функция для проверки активности абонемента
+        const isSubscriptionActive = (sub) => {
+          if (sub.is_expired) return false;
+          
+          const currentDate = new Date();
+          const endDate = sub.end_date ? new Date(sub.end_date) : null;
+          
+          if (endDate && endDate < currentDate) return false;
+          if (sub.status && sub.status !== 'active') return false;
+          if (sub.visits_left !== null && sub.visits_left <= 0) return false;
+          
+          return true;
+        };
+        
+        // Отмечаем, если есть хотя бы один активный абонемент
+        const activeSubscription = subscriptions.find(sub => isSubscriptionActive(sub));
+        setHasActiveSubscription(!!activeSubscription);
+        
         // Получение данных профиля пользователя
         const profileResponse = await axios.get('http://localhost:3000/api/auth/profile', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setProfile(profileResponse.data);
-        
-        // Получение абонементов пользователя
-        const subscriptionsResponse = await axios.get('http://localhost:3000/api/subscription/my', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setSubscriptions(subscriptionsResponse.data);
         
         // Получение групп, в которые записан пользователь
         const enrollmentsResponse = await axios.get('http://localhost:3000/api/user/enrollments', {
@@ -107,11 +131,6 @@ function Profile() {
     }
   })();
   
-  // Проверка на наличие активного абонемента
-  const hasActiveSubscription = subscriptions.some(
-    sub => sub.active && new Date(sub.end_date) > new Date()
-  );
-
   return (
     <div className="profile-container">
       <h2>Профиль пользователя</h2>
@@ -155,13 +174,17 @@ function Profile() {
             {/* Для клиента */}
             {role === 'client' && (
               <div className="role-specific-actions">
-                <div className="subscription-status">
-                  {hasActiveSubscription ? (
-                    <div className="status-active">У вас есть активный абонемент</div>
-                  ) : (
-                    <div className="status-inactive">У вас нет активного абонемента</div>
-                  )}
-                </div>
+                {!hasActiveSubscription && (
+                  <div className="warning-message">
+                    У вас нет активного абонемента
+                  </div>
+                )}
+
+                {hasActiveSubscription && (
+                  <div className="success-message">
+                    У вас есть активный абонемент
+                  </div>
+                )}
                 <Link to="/subscription" className="profile-link-button">
                   Управление абонементами
                 </Link>

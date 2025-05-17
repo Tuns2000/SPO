@@ -1,0 +1,116 @@
+.admin-analytics {
+  padding: 20px;
+}
+
+.admin-analytics h2 {
+  color: #0277bd;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e3f2fd;
+  padding-bottom: 10px;
+}
+
+.analytics-section {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.analytics-section h3 {
+  color: #0277bd;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+/* Стили для примера столбчатой диаграммы */
+.chart-placeholder {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  height: 250px;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 4px;
+}
+
+.chart-bar {
+  width: 40px;
+  background-color: #2196f3;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: height 0.5s;
+}
+
+.chart-bar span {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #666;
+}
+
+/* Стили для примера круговой диаграммы */
+.pie-chart-placeholder {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.pie-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-right: 20px;
+}
+
+.color-box {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  border-radius: 4px;
+}
+
+.color-box.monthly {
+  background-color: #2196f3;
+}
+
+.color-box.quarterly {
+  background-color: #4caf50;
+}
+
+.color-box.annual {
+  background-color: #ff9800;
+}
+
+.color-box.single {
+  background-color: #9c27b0;
+}
+
+.analytics-note {
+  background-color: #e8f5e9;
+  border-left: 4px solid #4caf50;
+  padding: 15px;
+  border-radius: 0 4px 4px 0;
+}
+
+.analytics-note p {
+  margin: 0;
+  color: #2e7d32;
+}
+
+@media (max-width: 768px) {
+  .chart-placeholder {
+    height: 200px;
+  }
+  
+  .chart-bar {
+    width: 30px;
+  }
+}

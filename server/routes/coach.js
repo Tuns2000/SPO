@@ -1,13 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../models/database');
-const pool = require('../db');
-const authMiddleware = require('../middleware/auth');
-const roleMiddleware = require('../middleware/role');
-const auth = require('../middleware/auth');
-const { NotificationService } = require('../models/notification-observer');
+const pool = require('../db'); // Изменить импорт с { pool } на pool
+const db = pool; // Добавить эту строку для совместимости с существующими вызовами db.query
+const { verifyToken } = require('../middleware/auth');
+const { roleMiddleware } = require('../middleware/role');
 
-const notificationService = new NotificationService();
+// Создаем псевдоним для совместимости с существующим кодом
+const authMiddleware = verifyToken;
 
 // Создаем таблицу coaches при инициализации
 async function createCoachesTable() {
@@ -102,7 +101,7 @@ router.get('/', async (req, res) => {
 // ВАЖНО: Сначала идут все статические маршруты
 
 // Получение данных профиля тренера
-router.get('/profile', auth, async (req, res) => {
+router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     
@@ -175,7 +174,7 @@ router.get('/profile', auth, async (req, res) => {
 });
 
 // Обновление информации о тренере
-router.put('/profile', auth, async (req, res) => {
+router.put('/profile', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { specialty, experience, description } = req.body;
@@ -212,7 +211,7 @@ router.put('/profile', auth, async (req, res) => {
 });
 
 // Получение групп тренера
-router.get('/groups', auth, async (req, res) => {
+router.get('/groups', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     
@@ -245,7 +244,7 @@ router.get('/groups', auth, async (req, res) => {
 });
 
 // Добавление новой группы тренером
-router.post('/groups', auth, async (req, res) => {
+router.post('/groups', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { name, capacity, description } = req.body;
@@ -275,7 +274,7 @@ router.post('/groups', auth, async (req, res) => {
 });
 
 // Маршруты для конкретных групп
-router.put('/groups/:id', auth, async (req, res) => {
+router.put('/groups/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const groupId = req.params.id;
@@ -318,7 +317,7 @@ router.put('/groups/:id', auth, async (req, res) => {
   }
 });
 
-router.delete('/groups/:id', auth, async (req, res) => {
+router.delete('/groups/:id', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const groupId = req.params.id;
@@ -363,7 +362,7 @@ router.delete('/groups/:id', auth, async (req, res) => {
 });
 
 // Получение участников группы
-router.get('/groups/:id/members', auth, async (req, res) => {
+router.get('/groups/:id/members', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const groupId = req.params.id;
@@ -410,7 +409,7 @@ router.get('/groups/:id/members', auth, async (req, res) => {
 });
 
 // Удаление участника из группы
-router.delete('/groups/:groupId/members/:memberId', auth, async (req, res) => {
+router.delete('/groups/:groupId/members/:memberId', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { groupId, memberId } = req.params;
@@ -469,7 +468,7 @@ router.delete('/groups/:groupId/members/:memberId', auth, async (req, res) => {
   }
 });
 
-router.post('/groups/:id/schedule', auth, async (req, res) => {
+router.post('/groups/:id/schedule', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const groupId = req.params.id;
@@ -583,6 +582,138 @@ router.get('/:id', async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Ошибка сервера при получении информации о тренере' });
+  }
+});
+
+// Получение групп тренера (по запросу)
+router.get('/my-groups', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Сначала получаем id тренера по id пользователя
+    const coachResult = await pool.query('SELECT id FROM coaches WHERE user_id = $1', [userId]);
+    
+    if (coachResult.rows.length === 0) {
+      return res.status(403).json({ error: 'У вас нет прав тренера' });
+    }
+    
+    const coachId = coachResult.rows[0].id;
+    
+    // Получаем все группы этого тренера
+    const groupsResult = await pool.query(`
+      SELECT g.id, g.name, g.description, g.capacity, g.category,
+             p.name as pool_name, p.address as pool_address,
+             (SELECT COUNT(*) FROM group_enrollments 
+              WHERE group_id = g.id AND status = 'active') as enrolled_count
+      FROM groups g
+      LEFT JOIN pools p ON g.pool_id = p.id
+      WHERE g.coach_id = $1
+      ORDER BY g.name
+    `, [coachId]);
+    
+    res.json(groupsResult.rows);
+  } catch (err) {
+    console.error('Ошибка при получении групп тренера:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Получение расписания тренера (по запросу)
+router.get('/my-schedule', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Сначала получаем id тренера по id пользователя
+    const coachResult = await pool.query('SELECT id FROM coaches WHERE user_id = $1', [userId]);
+    
+    if (coachResult.rows.length === 0) {
+      return res.status(403).json({ error: 'У вас нет прав тренера' });
+    }
+    
+    const coachId = coachResult.rows[0].id;
+    
+    // Получаем расписание всех групп этого тренера
+    const scheduleResult = await pool.query(`
+      SELECT s.id, s.date, s.time, g.name as group_name, g.capacity,
+             (SELECT COUNT(*) FROM group_enrollments e WHERE e.group_id = g.id AND e.status = 'active') as enrolled_count
+      FROM schedules s
+      JOIN groups g ON s.group_id = g.id
+      WHERE g.coach_id = $1
+      ORDER BY s.date, s.time
+    `, [coachId]);
+    
+    res.json(scheduleResult.rows);
+  } catch (err) {
+    console.error('Ошибка при получении расписания тренера:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Получение профиля тренера (по запросу)
+router.get('/my-profile', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Получаем данные пользователя
+    const userResult = await pool.query(
+      'SELECT id, name, email, role FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    // Данные о тренере
+    let coachInfo = null;
+    try {
+      const coachResult = await pool.query(
+        'SELECT specialty, experience, rating, description FROM coaches WHERE user_id = $1',
+        [userId]
+      );
+      
+      if (coachResult.rows.length > 0) {
+        coachInfo = coachResult.rows[0];
+      }
+    } catch (coachError) {
+      console.error('Ошибка при получении данных тренера:', coachError);
+    }
+    
+    // Получаем группы
+    let groups = [];
+    try {
+      // Сначала получаем ID тренера
+      const coachResult = await pool.query(
+        'SELECT id FROM coaches WHERE user_id = $1',
+        [userId]
+      );
+      
+      if (coachResult.rows.length > 0) {
+        const coachId = coachResult.rows[0].id;
+        
+        // Используем coachId для получения групп
+        const groupsResult = await pool.query(
+          `SELECT id, name, capacity, description 
+           FROM groups 
+           WHERE coach_id = $1`,
+          [coachId]
+        );
+        groups = groupsResult.rows.map(g => ({...g, enrolled_count: 0}));
+      }
+    } catch (groupsError) {
+      console.error('Ошибка при получении групп тренера:', groupsError);
+    }
+    
+    // Отправляем все собранные данные
+    res.json({
+      user: userResult.rows[0],
+      coach_info: coachInfo,
+      groups: groups
+    });
+    
+  } catch (err) {
+    console.error('Общая ошибка при получении профиля тренера:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
 

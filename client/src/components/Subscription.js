@@ -78,6 +78,42 @@ function Subscription() {
     setError(err.response?.data?.error || defaultMessage);
   };
   
+  // Форматирование цены
+  function formatPrice(price) {
+    return price !== null && price !== undefined 
+      ? `${price} ₽` 
+      : 'Бесплатно';
+  }
+
+  // Добавьте функцию для определения активности абонемента
+  function isSubscriptionActive(subscription) {
+    const currentDate = new Date();
+    const endDate = subscription.end_date ? new Date(subscription.end_date) : null;
+    
+    // Если есть прямой флаг is_expired
+    if (subscription.is_expired) {
+      return false;
+    }
+    
+    // Если дата окончания в прошлом
+    if (endDate && endDate < currentDate) {
+      return false;
+    }
+    
+    // Если у абонемента статус неактивный
+    if (subscription.status && subscription.status !== 'active') {
+      return false;
+    }
+    
+    // Если закончились посещения
+    if (subscription.visits_left !== null && subscription.visits_left <= 0) {
+      return false;
+    }
+    
+    // По умолчанию считаем абонемент активным
+    return true;
+  }
+
   // Отображение списка абонементов и форм подписки
   return (
     <div className="subscription-container">
@@ -162,30 +198,34 @@ function Subscription() {
           <div className="loading">Загрузка абонементов...</div>
         ) : subscriptions.length > 0 ? (
           <div className="subscriptions-list">
-            {subscriptions.map(sub => (
-              <div key={sub.id} className={`subscription-item ${sub.active ? 'active' : 'expired'}`}>
-                <div className="subscription-header">
-                  <h3>{sub.description || getSubscriptionName(sub.type)}</h3>
-                  <span className={`status-badge ${sub.active ? 'active' : 'expired'}`}>
-                    {sub.active ? 'Активен' : 'Истек'}
-                  </span>
+            {subscriptions.map(sub => {
+              const isActive = isSubscriptionActive(sub);
+              
+              return (
+                <div key={sub.id} className={`subscription-item ${isActive ? 'active' : 'expired'}`}>
+                  <div className="subscription-header">
+                    <h3>{sub.description || getSubscriptionName(sub.type)}</h3>
+                    <span className={`status-badge ${isActive ? 'active' : 'expired'}`}>
+                      {isActive ? 'Активен' : 'Истек'}
+                    </span>
+                  </div>
+                  <div className="subscription-details">
+                    <div className="detail">
+                      <span className="label">Начало:</span>
+                      <span className="value">{new Date(sub.start_date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="detail">
+                      <span className="label">Окончание:</span>
+                      <span className="value">{new Date(sub.end_date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="detail">
+                      <span className="label">Стоимость:</span>
+                      <span className="value">{formatPrice(sub.price)}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="subscription-details">
-                  <div className="detail">
-                    <span className="label">Начало:</span>
-                    <span className="value">{new Date(sub.start_date).toLocaleDateString()}</span>
-                  </div>
-                  <div className="detail">
-                    <span className="label">Окончание:</span>
-                    <span className="value">{new Date(sub.end_date).toLocaleDateString()}</span>
-                  </div>
-                  <div className="detail">
-                    <span className="label">Стоимость:</span>
-                    <span className="value">{sub.price} ₽</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="no-subscriptions">

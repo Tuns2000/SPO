@@ -1,9 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../models/database');
-const authMiddleware = require('../middleware/auth');
-const roleMiddleware = require('../middleware/role');
+const pool = require('../db');
+const db = pool; // Для обратной совместимости
+const { verifyToken } = require('../middleware/auth'); // Импортируем verifyToken
+const { roleMiddleware } = require('../middleware/role'); 
 const { NotificationService } = require('../models/notification-observer');
+
+// Добавляем этот alias для всех существующих вызовов authMiddleware
+const authMiddleware = verifyToken;
 
 const notificationService = new NotificationService();
 
@@ -63,7 +67,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Создание новой группы (только для админа)
-router.post('/', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+router.post('/', verifyToken, roleMiddleware(['admin']), async (req, res) => {
   const { name, coachId, capacity, description } = req.body;
   
   try {

@@ -2,8 +2,11 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const auth = require('../middleware/auth');
-const roleMiddleware = require('../middleware/role');
+const { verifyToken } = require('../middleware/auth'); // Правильный импорт
+const { roleMiddleware } = require('../middleware/role'); // Правильный импорт
+
+// Создаем псевдоним для совместимости с существующим кодом
+const authMiddleware = verifyToken;
 
 // Получение списка всех бассейнов
 router.get('/', async (req, res) => {
@@ -70,7 +73,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Добавление нового бассейна (только для администратора)
-router.post('/', auth, roleMiddleware(['admin']), async (req, res) => {
+router.post('/', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
   try {
     const { name, address, type } = req.body;
     
@@ -98,7 +101,7 @@ router.post('/', auth, roleMiddleware(['admin']), async (req, res) => {
 });
 
 // Обновление данных бассейна (только для администратора)
-router.put('/:id', auth, roleMiddleware(['admin']), async (req, res) => {
+router.put('/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
   try {
     const poolId = req.params.id;
     const { name, address, type } = req.body;
@@ -160,7 +163,7 @@ router.put('/:id', auth, roleMiddleware(['admin']), async (req, res) => {
 });
 
 // Удаление бассейна (только для администратора)
-router.delete('/:id', auth, roleMiddleware(['admin']), async (req, res) => {
+router.delete('/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
   try {
     const poolId = req.params.id;
     
@@ -191,7 +194,7 @@ router.delete('/:id', auth, roleMiddleware(['admin']), async (req, res) => {
 });
 
 // Маршрут для получения статистики
-router.get('/:id/stats', auth, async (req, res) => {
+router.get('/:id/stats', authMiddleware, async (req, res) => {
   try {
     const poolId = req.params.id;
     
