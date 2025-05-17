@@ -9,6 +9,7 @@ const { addDescriptionColumn } = require('./migrations/add-description-column');
 const { addPoolIdColumn } = require('./migrations/add-pool-id-column');
 const { addVisitsPerWeekColumn } = require('./migrations/add-visits-per-week-column');
 const { addPoolIdToGroups } = require('./migrations/add-pool-id-to-groups');
+const { addCategoryColumn } = require('./migrations/add-category-column');
 const errorHandler = require('./middleware/errorHandler');
 const requestLogger = require('./middleware/requestLogger');
 const swaggerOptions = require('./utils/swagger');
@@ -38,6 +39,7 @@ async function initialize() {
     await addPoolIdColumn();
     await addVisitsPerWeekColumn();
     await addPoolIdToGroups();
+    await addCategoryColumn();
     logger.info('База данных и миграции инициализированы');
   } catch (err) {
     logger.error('Ошибка при инициализации:', { error: err.message });

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link, Routes, Route, useNavigate } from 'react-router-dom';
+import { Link, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Dashboard.css';
-import AdminUsers from './users/AdminUsers';
-import AdminSubscriptions from './subscriptions/AdminSubscriptions';
-import AdminAnalytics from './analytics/AdminAnalytics';
+import AdminOverviewComponent from './overview/overview'; // Переименовываем импорт или локальный компонент
+import AdminUsers from './users/users';
+import AdminGroups from './groups/groups';
+import AdminCoaches from './coaches/coaches';
+import AdminPools from './pools/pools';
+import AdminSubscriptions from './subscriptions/subscriptions';
 
 const Dashboard = () => {
   const [users, setUsers] = useState([]);
@@ -66,20 +69,30 @@ const Dashboard = () => {
       <div className="admin-sidebar">
         <h2>Панель управления</h2>
         <nav className="admin-nav">
-          <Link to="/admin-dashboard" className="admin-nav-link">Обзор</Link>
-          <Link to="/admin-dashboard/users" className="admin-nav-link">Пользователи</Link>
-          <Link to="/admin-dashboard/subscriptions" className="admin-nav-link">Абонементы</Link>
-          <Link to="/admin/schedule" className="admin-nav-link">Расписание</Link>
-          <Link to="/admin/groups" className="admin-nav-link">Группы</Link>
-          <Link to="/admin/coaches" className="admin-nav-link">Тренеры</Link>
-          <Link to="/admin-dashboard/analytics" className="admin-nav-link">Аналитика</Link>
+          <NavLink to="/admin-dashboard" end>
+            Обзор
+          </NavLink>
+          <NavLink to="/admin-dashboard/users">
+            Пользователи
+          </NavLink>
+          <NavLink to="/admin-dashboard/coaches">
+            Тренеры
+          </NavLink>
+          <NavLink to="/admin-dashboard/groups">
+            Группы
+          </NavLink>
+          <NavLink to="/admin-dashboard/pools">
+            Бассейны
+          </NavLink>
+          <NavLink to="/admin-dashboard/subscriptions">
+            Абонементы
+          </NavLink>
         </nav>
       </div>
-
       <div className="admin-content">
         <Routes>
           <Route path="/" element={
-            <AdminOverview 
+            <AdminOverviewComponent 
               loading={loading} 
               error={error} 
               stats={stats} 
@@ -88,16 +101,18 @@ const Dashboard = () => {
             />
           } />
           <Route path="/users" element={<AdminUsers />} />
+          <Route path="/coaches" element={<AdminCoaches />} />
+          <Route path="/groups" element={<AdminGroups />} />
+          <Route path="/pools" element={<AdminPools />} />
           <Route path="/subscriptions" element={<AdminSubscriptions />} />
-          <Route path="/analytics" element={<AdminAnalytics />} />
         </Routes>
       </div>
     </div>
   );
 };
 
-// Компонент для главной страницы админ-панели
-const AdminOverview = ({ loading, error, stats, users, fetchData }) => {
+// Переименуйте этот локальный компонент, чтобы избежать конфликта с импортом
+const AdminDashboardOverview = ({ loading, error, stats, users, fetchData }) => {
   if (loading) return <div className="loading">Загрузка данных...</div>;
   if (error) return <div className="error-message">{error}</div>;
 

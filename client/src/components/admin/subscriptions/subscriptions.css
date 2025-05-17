@@ -1,0 +1,88 @@
+.admin-subscriptions-container {
+  padding: 20px;
+}
+
+.admin-subscriptions-container h2 {
+  margin-bottom: 20px;
+  color: #0078d7;
+}
+
+.error-message, .success-message {
+  padding: 10px 15px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
+.error-message {
+  background-color: #ffeeee;
+  border: 1px solid #ffbdbd;
+  color: #d8000c;
+}
+
+.success-message {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.subscriptions-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.subscriptions-table th, 
+.subscriptions-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.subscriptions-table thead th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.subscriptions-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.active-subscription {
+  background-color: #f8fff8;
+}
+
+.expired-subscription {
+  background-color: #fff8f8;
+  color: #777;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge.expired {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.loading {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
