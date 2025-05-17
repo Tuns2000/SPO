@@ -300,267 +300,6 @@ router.delete('/groups/:id', verifyToken, authorizeAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Группа не найдена' });
     }
     
-    // Сначала удаляем все записи на группу
-    await pool.query('DELETE FROM group_enrollments WHERE group_id = $1', [id]);
-    
-    // Затем удаляем саму группу
-    await pool.query('DELETE FROM groups WHERE id = $1', [id]);
-    
-    res.json({ message: 'Группа успешно удалена' });
-  } catch (err) {
-    console.error('Ошибка при удалении группы:', err);
-    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
-  }
-});
-
-// Получение расписания
-router.get('/schedule', verifyToken, authorizeAdmin, async (req, res) => {
-  try {
-    const query = `
-      SELECT s.id, s.date, s.time, s.status, 
-             g.id as group_id, g.name as group_name, 
-             u.name as coach_name,
-             p.name as pool_name
-      FROM schedules s
-      JOIN groups g ON s.group_id = g.id
-      LEFT JOIN coaches c ON g.coach_id = c.id
-      LEFT JOIN users u ON c.user_id = u.id
-      LEFT JOIN pools p ON g.pool_id = p.id
-      ORDER BY s.date, s.time
-    `;
-    
-    const result = await pool.query(query);
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Ошибка при получении расписания:', err);
-    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
-  }
-});
-
-// Обновление тренера
-router.put('/coaches/:id', verifyToken, authorizeAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { specialty, experience, description, pool_id } = req.body;
-    
-    // Проверка существования тренера
-    const coachResult = await pool.query('SELECT * FROM coaches WHERE id = $1', [id]);
-    if (coachResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Тренер не найден' });
-    }
-    
-    // Преобразование experience в целое число или null, если пустая строка или не число
-    let experienceParam = null;
-    if (experience !== undefined && experience !== '') {
-      const parsedExperience = parseInt(experience, 10);
-      if (!isNaN(parsedExperience)) {
-        experienceParam = parsedExperience;
-      }
-    }
-    
-    // Преобразование pool_id в число или null
-    let poolIdParam = null;
-    if (pool_id !== undefined && pool_id !== '') {
-      poolIdParam = parseInt(pool_id, 10);
-      
-      // Проверка существования бассейна
-      const poolCheck = await pool.query('SELECT id FROM pools WHERE id = $1', [poolIdParam]);
-      if (poolCheck.rows.length === 0) {
-        return res.status(404).json({ error: 'Указанный бассейн не существует' });
-      }
-    }
-    
-    // Обновление данных тренера
-    const updateQuery = `
-      UPDATE coaches 
-      SET 
-        specialty = COALESCE($1, specialty),
-        experience = COALESCE($2, experience),
-        description = COALESCE($3, description),
-        pool_id = $4
-      WHERE id = $5
-      RETURNING *
-    `;
-    
-    const result = await pool.query(updateQuery, [
-      specialty || null, 
-      experienceParam, 
-      description || null, 
-      poolIdParam,
-      id
-    ]);
-    
-    const coach = result.rows[0];
-    
-    // Получаем дополнительную информацию о тренере для ответа
-    const coachDetailQuery = `
-      SELECT c.*, u.name, u.email, p.name as pool_name
-      FROM coaches c
-      JOIN users u ON c.user_id = u.id
-      LEFT JOIN pools p ON c.pool_id = p.id
-      WHERE c.id = $1
-    `;
-    
-    const detailResult = await pool.query(coachDetailQuery, [id]);
-    
-    res.json({ message: 'Тренер успешно обновлен', coach: detailResult.rows[0] });
-  } catch (err) {
-    console.error('Ошибка при обновлении тренера:', err);
-    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
-  }
-});
-
-// Удаление тренера
-router.delete('/coaches/:id', verifyToken, authorizeAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Проверка существования тренера
-    const coachResult = await pool.query('SELECT * FROM coaches WHERE id = $1', [id]);
-    if (coachResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Тренер не найден' });
-    }
-    
-    // Проверка, есть ли у тренера группы
-    const groupsResult = await pool.query('SELECT COUNT(*) FROM groups WHERE coach_id = $1', [id]);
-    
-    if (parseInt(groupsResult.rows[0].count) > 0) {
-      return res.status(400).json({ 
-        error: 'Невозможно удалить тренера, у которого есть группы. Сначала переназначьте группы другим тренерам.' 
-      });
-    }
-    
-    // Удаление тренера
-    await pool.query('DELETE FROM coaches WHERE id = $1', [id]);
-    
-    res.json({ message: 'Тренер успешно удален' });
-  } catch (err) {
-    console.error('Ошибка при удалении тренера:', err);
-    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
-  }
-});
-
-// Обновление группы
-router.put('/groups/:id', verifyToken, authorizeAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, coach_id, pool_id, capacity, description, category } = req.body;
-    
-    // Проверка существования группы
-    const groupResult = await pool.query('SELECT * FROM groups WHERE id = $1', [id]);
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Группа не найдена' });
-    }
-    
-    // Определяем параметры, которые будем использовать для обновления
-    let coachIdParam = coach_id || null;
-    let poolIdParam = pool_id || null;
-    
-    // Проверка на существование тренера и связанных ограничений
-    if (coach_id) {
-      const coachCheck = await pool.query('SELECT * FROM coaches WHERE id = $1', [coach_id]);
-      if (coachCheck.rows.length === 0) {
-        return res.status(400).json({ error: 'Указанный тренер не существует' });
-      }
-      
-      // Проверяем, что тренер назначен в бассейн
-      const coachPoolCheck = await pool.query('SELECT pool_id FROM coaches WHERE id = $1', [coach_id]);
-      
-      if (!coachPoolCheck.rows[0].pool_id) {
-        return res.status(400).json({ error: 'Выбранному тренеру не назначен бассейн' });
-      }
-      
-      // Если указан и бассейн, и тренер, проверяем их соответствие
-      if (pool_id && coachPoolCheck.rows[0].pool_id != pool_id) {
-        return res.status(400).json({ 
-          error: 'Несоответствие бассейна. Тренер работает в другом бассейне.' 
-        });
-      }
-      
-      // Используем бассейн тренера для группы
-      poolIdParam = coachPoolCheck.rows[0].pool_id;
-    }
-    
-    // Проверка на существование бассейна, если тренер не указан
-    if (!coach_id && pool_id) {
-      const poolResult = await pool.query('SELECT * FROM pools WHERE id = $1', [pool_id]);
-      if (poolResult.rows.length === 0) {
-        return res.status(400).json({ error: 'Указанный бассейн не существует' });
-      }
-    }
-    
-    // Проверка вместимости - не меньше, чем уже записано
-    const enrolledCount = await pool.query(
-      'SELECT COUNT(*) FROM group_enrollments WHERE group_id = $1 AND status = $2',
-      [id, 'active']
-    );
-    
-    const currentEnrolledCount = parseInt(enrolledCount.rows[0].count, 10);
-    if (capacity < currentEnrolledCount) {
-      return res.status(400).json({ 
-        error: `Вместимость не может быть меньше количества уже записанных участников (${currentEnrolledCount})`
-      });
-    }
-    
-    // Обновление данных группы
-    const updateQuery = `
-      UPDATE groups 
-      SET 
-        name = COALESCE($1, name),
-        coach_id = $2,
-        pool_id = $3,
-        capacity = COALESCE($4, capacity),
-        description = COALESCE($5, description),
-        category = COALESCE($6, category)
-      WHERE id = $7
-      RETURNING *
-    `;
-    
-    const result = await pool.query(updateQuery, [
-      name, 
-      coachIdParam, 
-      poolIdParam, 
-      capacity, 
-      description, 
-      category, 
-      id
-    ]);
-    
-    // Получаем подробную информацию о группе для ответа
-    const groupDetailQuery = `
-      SELECT g.*, 
-             c.id AS coach_id, u.name AS coach_name, 
-             p.name AS pool_name,
-             COUNT(ge.id) FILTER (WHERE ge.status = 'active') AS enrolled_count
-      FROM groups g
-      LEFT JOIN coaches c ON g.coach_id = c.id
-      LEFT JOIN users u ON c.user_id = u.id
-      LEFT JOIN pools p ON g.pool_id = p.id
-      LEFT JOIN group_enrollments ge ON g.id = ge.group_id
-      WHERE g.id = $1
-      GROUP BY g.id, c.id, u.name, p.name
-    `;
-    
-    const detailResult = await pool.query(groupDetailQuery, [id]);
-    
-    res.json(detailResult.rows[0]);
-  } catch (err) {
-    console.error('Ошибка при обновлении группы:', err);
-    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
-  }
-});
-
-// Удаление группы
-router.delete('/groups/:id', verifyToken, authorizeAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Проверка существования группы
-    const groupResult = await pool.query('SELECT * FROM groups WHERE id = $1', [id]);
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Группа не найдена' });
-    }
-    
     // Проверяем, есть ли активные участники в группе
     const enrollmentsResult = await pool.query(
       'SELECT COUNT(*) FROM group_enrollments WHERE group_id = $1 AND status = $2',
@@ -589,86 +328,357 @@ router.delete('/groups/:id', verifyToken, authorizeAdmin, async (req, res) => {
   }
 });
 
-// Обновление расписания
-router.put('/schedule/:id', verifyToken, authorizeAdmin, async (req, res) => {
+// Получение расписания
+router.get('/schedule', verifyToken, authorizeAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { group_id, date, time, status } = req.body;
-    
-    // Проверка существования записи в расписании
-    const scheduleResult = await pool.query('SELECT * FROM schedules WHERE id = $1', [id]);
-    if (scheduleResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Запись в расписании не найдена' });
-    }
-    
-    // Проверка существования группы
-    if (group_id) {
-      const groupResult = await pool.query('SELECT * FROM groups WHERE id = $1', [group_id]);
-      if (groupResult.rows.length === 0) {
-        return res.status(400).json({ error: 'Указанная группа не существует' });
-      }
-    }
-    
-    // Обновление записи в расписании
-    const updateQuery = `
-      UPDATE schedules 
-      SET 
-        group_id = COALESCE($1, group_id),
-        date = COALESCE($2::date, date),
-        time = COALESCE($3::time, time),
-        status = COALESCE($4, status)
-      WHERE id = $5
-      RETURNING *
-    `;
-    
-    const result = await pool.query(updateQuery, [
-      group_id,
-      date,
-      time,
-      status,
-      id
-    ]);
-    
-    // Получаем подробную информацию о записи расписания для ответа
-    const scheduleDetailQuery = `
-      SELECT s.id, s.date, s.time, s.status, 
-             g.id as group_id, g.name as group_name, 
-             u.name as coach_name,
-             p.name as pool_name
-      FROM schedules s
-      JOIN groups g ON s.group_id = g.id
+    const query = `
+      SELECT s.*, 
+             g.name AS group_name, g.category,
+             p.name AS pool_name,
+             u.name AS coach_name,
+             (SELECT COUNT(*) FROM schedule_enrollments se WHERE se.schedule_id = s.id AND se.status = 'active') AS enrolled_count
+      FROM schedule s
+      LEFT JOIN groups g ON s.group_id = g.id
+      LEFT JOIN pools p ON s.pool_id = p.id
       LEFT JOIN coaches c ON g.coach_id = c.id
       LEFT JOIN users u ON c.user_id = u.id
-      LEFT JOIN pools p ON g.pool_id = p.id
-      WHERE s.id = $1
+      ORDER BY s.day_of_week, s.start_time
     `;
     
-    const detailResult = await pool.query(scheduleDetailQuery, [id]);
+    const result = await pool.query(query);
     
-    res.json(detailResult.rows[0]);
+    res.json(result.rows);
   } catch (err) {
-    console.error('Ошибка при обновлении расписания:', err);
-    res.status(500).json({ error: 'Внутренняя ошибка сервера: ' + err.message });
+    console.error('Ошибка при получении расписания:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
 
-// Удаление записи из расписания
+// Создание нового занятия в расписании
+router.post('/schedule', verifyToken, authorizeAdmin, async (req, res) => {
+  try {
+    const { group_id, day_of_week, start_time, end_time, pool_id, max_participants, status } = req.body;
+    
+    // Валидация входных данных
+    if (!group_id || !day_of_week || !start_time || !end_time) {
+      return res.status(400).json({ error: 'Необходимо указать группу, день недели, время начала и окончания' });
+    }
+    
+    if (day_of_week < 1 || day_of_week > 7) {
+      return res.status(400).json({ error: 'День недели должен быть от 1 до 7' });
+    }
+    
+    // Проверка существования группы
+    const groupCheck = await pool.query('SELECT * FROM groups WHERE id = $1', [group_id]);
+    if (groupCheck.rows.length === 0) {
+      return res.status(400).json({ error: 'Указанная группа не существует' });
+    }
+    
+    // Определение бассейна на основе группы, если не указан
+    let poolIdToUse = pool_id;
+    if (!poolIdToUse) {
+      const groupPoolCheck = await pool.query('SELECT pool_id FROM groups WHERE id = $1', [group_id]);
+      if (groupPoolCheck.rows[0].pool_id) {
+        poolIdToUse = groupPoolCheck.rows[0].pool_id;
+      }
+    }
+    
+    // Проверка на пересечение с существующими занятиями в этом бассейне
+    if (poolIdToUse) {
+      const overlapCheck = await pool.query(`
+        SELECT * FROM schedule
+        WHERE pool_id = $1
+        AND day_of_week = $2
+        AND status = 'active'
+        AND (
+          (start_time <= $3 AND end_time > $3) OR
+          (start_time < $4 AND end_time >= $4) OR
+          (start_time >= $3 AND end_time <= $4)
+        )
+      `, [poolIdToUse, day_of_week, start_time, end_time]);
+      
+      if (overlapCheck.rows.length > 0) {
+        return res.status(400).json({ 
+          error: 'Время занятия пересекается с другими занятиями в этом бассейне' 
+        });
+      }
+    }
+    
+    // Создание нового занятия
+    const result = await pool.query(`
+      INSERT INTO schedule (
+        group_id, day_of_week, start_time, end_time, 
+        pool_id, max_participants, status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [
+      group_id, 
+      day_of_week, 
+      start_time, 
+      end_time, 
+      poolIdToUse, 
+      max_participants || null, 
+      status || 'active'
+    ]);
+    
+    // Получаем дополнительные данные для ответа
+    const insertedId = result.rows[0].id;
+    const detailQuery = `
+      SELECT s.*, 
+             g.name AS group_name, g.category,
+             p.name AS pool_name,
+             u.name AS coach_name
+      FROM schedule s
+      LEFT JOIN groups g ON s.group_id = g.id
+      LEFT JOIN pools p ON s.pool_id = p.id
+      LEFT JOIN coaches c ON g.coach_id = c.id
+      LEFT JOIN users u ON c.user_id = u.id
+      WHERE s.id = $1
+    `;
+    
+    const detailResult = await pool.query(detailQuery, [insertedId]);
+    
+    res.status(201).json(detailResult.rows[0]);
+  } catch (err) {
+    console.error('Ошибка при создании занятия:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Получение детальной информации о занятии
+router.get('/schedule/:id', verifyToken, authorizeAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const scheduleQuery = `
+      SELECT s.*, 
+             g.name AS group_name, g.category,
+             p.name AS pool_name,
+             u.name AS coach_name,
+             (SELECT COUNT(*) FROM schedule_enrollments se WHERE se.schedule_id = s.id AND se.status = 'active') AS enrolled_count
+      FROM schedule s
+      LEFT JOIN groups g ON s.group_id = g.id
+      LEFT JOIN pools p ON s.pool_id = p.id
+      LEFT JOIN coaches c ON g.coach_id = c.id
+      LEFT JOIN users u ON c.user_id = u.id
+      WHERE s.id = $1
+    `;
+    
+    const scheduleResult = await pool.query(scheduleQuery, [id]);
+    
+    if (scheduleResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Занятие не найдено' });
+    }
+    
+    const enrollmentsQuery = `
+      SELECT se.*, u.name, u.email 
+      FROM schedule_enrollments se
+      JOIN users u ON se.user_id = u.id
+      WHERE se.schedule_id = $1
+      ORDER BY se.enrollment_date
+    `;
+    
+    const enrollmentsResult = await pool.query(enrollmentsQuery, [id]);
+    
+    const scheduleData = scheduleResult.rows[0];
+    scheduleData.enrollments = enrollmentsResult.rows;
+    
+    res.json(scheduleData);
+  } catch (err) {
+    console.error('Ошибка при получении данных о занятии:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Обновление занятия в расписании
+router.put('/schedule/:id', verifyToken, authorizeAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      group_id, 
+      day_of_week, 
+      start_time, 
+      end_time, 
+      pool_id, 
+      max_participants, 
+      status 
+    } = req.body;
+
+    // Проверка существования занятия
+    const scheduleCheck = await pool.query('SELECT * FROM schedule WHERE id = $1', [id]);
+    if (scheduleCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Занятие не найдено' });
+    }
+
+    // Проверка валидности группы
+    if (group_id) {
+      const groupCheck = await pool.query('SELECT * FROM groups WHERE id = $1', [group_id]);
+      if (groupCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Указанная группа не существует' });
+      }
+    }
+
+    // Проверка валидности дня недели
+    if (day_of_week && (day_of_week < 1 || day_of_week > 7)) {
+      return res.status(400).json({ error: 'День недели должен быть от 1 до 7' });
+    }
+
+    // Получаем текущие данные занятия
+    const currentSchedule = scheduleCheck.rows[0];
+    
+    // Определяем бассейн на основе группы, если не указан
+    let poolIdToUse = pool_id;
+    if (!poolIdToUse && group_id) {
+      const groupPoolResult = await pool.query('SELECT pool_id FROM groups WHERE id = $1', [group_id]);
+      if (groupPoolResult.rows.length > 0 && groupPoolResult.rows[0].pool_id) {
+        poolIdToUse = groupPoolResult.rows[0].pool_id;
+      }
+    } else if (!poolIdToUse) {
+      // Оставляем текущее значение
+      poolIdToUse = currentSchedule.pool_id;
+    }
+
+    // Проверка на пересечение с другими занятиями
+    const updatedDayOfWeek = day_of_week || currentSchedule.day_of_week;
+    const updatedStartTime = start_time || currentSchedule.start_time;
+    const updatedEndTime = end_time || currentSchedule.end_time;
+
+    if (poolIdToUse) {
+      const overlapCheck = await pool.query(`
+        SELECT * FROM schedule
+        WHERE id != $1
+        AND pool_id = $2
+        AND day_of_week = $3
+        AND status = 'active'
+        AND (
+          (start_time <= $4 AND end_time > $4) OR
+          (start_time < $5 AND end_time >= $5) OR
+          (start_time >= $4 AND end_time <= $5)
+        )
+      `, [id, poolIdToUse, updatedDayOfWeek, updatedStartTime, updatedEndTime]);
+      
+      if (overlapCheck.rows.length > 0) {
+        return res.status(400).json({ 
+          error: 'Время занятия пересекается с другими занятиями в этом бассейне' 
+        });
+      }
+    }
+
+    // Обновление занятия
+    const updateQuery = `
+      UPDATE schedule
+      SET 
+        group_id = COALESCE($1, group_id),
+        day_of_week = COALESCE($2, day_of_week),
+        start_time = COALESCE($3, start_time),
+        end_time = COALESCE($4, end_time),
+        pool_id = $5,
+        max_participants = COALESCE($6, max_participants),
+        status = COALESCE($7, status),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $8
+      RETURNING *
+    `;
+
+    const result = await pool.query(updateQuery, [
+      group_id, 
+      day_of_week, 
+      start_time, 
+      end_time, 
+      poolIdToUse, 
+      max_participants, 
+      status, 
+      id
+    ]);
+
+    // Получаем дополнительные данные для ответа
+    const detailQuery = `
+      SELECT s.*, 
+             g.name AS group_name, g.category,
+             p.name AS pool_name,
+             u.name AS coach_name
+      FROM schedule s
+      LEFT JOIN groups g ON s.group_id = g.id
+      LEFT JOIN pools p ON s.pool_id = p.id
+      LEFT JOIN coaches c ON g.coach_id = c.id
+      LEFT JOIN users u ON c.user_id = u.id
+      WHERE s.id = $1
+    `;
+    
+    const detailResult = await pool.query(detailQuery, [id]);
+    
+    res.json(detailResult.rows[0]);
+  } catch (err) {
+    console.error('Ошибка при обновлении занятия:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Удаление занятия из расписания
 router.delete('/schedule/:id', verifyToken, authorizeAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Проверка существования записи в расписании
-    const scheduleResult = await pool.query('SELECT * FROM schedules WHERE id = $1', [id]);
-    if (scheduleResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Запись в расписании не найдена' });
+    // Проверка существования занятия
+    const scheduleCheck = await pool.query('SELECT * FROM schedule WHERE id = $1', [id]);
+    if (scheduleCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Занятие не найдено' });
     }
     
-    // Удаление записи из расписания
-    await pool.query('DELETE FROM schedules WHERE id = $1', [id]);
+    // Проверка наличия активных записей на занятие
+    const enrollmentsCheck = await pool.query(
+      'SELECT COUNT(*) FROM schedule_enrollments WHERE schedule_id = $1 AND status = $2',
+      [id, 'active']
+    );
     
-    res.json({ message: 'Запись в расписании успешно удалена' });
+    const enrollmentsCount = parseInt(enrollmentsCheck.rows[0].count, 10);
+    
+    if (enrollmentsCount > 0) {
+      // Отменяем все записи на занятие
+      await pool.query(
+        'UPDATE schedule_enrollments SET status = $1 WHERE schedule_id = $2 AND status = $3',
+        ['cancelled', id, 'active']
+      );
+      
+      // Добавляем уведомления пользователям
+      const enrolledUsers = await pool.query(
+        'SELECT user_id FROM schedule_enrollments WHERE schedule_id = $1',
+        [id]
+      );
+      
+      const scheduleInfo = await pool.query(`
+        SELECT g.name AS group_name, s.day_of_week, s.start_time
+        FROM schedule s
+        JOIN groups g ON s.group_id = g.id
+        WHERE s.id = $1
+      `, [id]);
+      
+      if (scheduleInfo.rows.length > 0) {
+        const { group_name, day_of_week, start_time } = scheduleInfo.rows[0];
+        const dayNames = ['', 'понедельник', 'вторник', 'среду', 'четверг', 'пятницу', 'субботу', 'воскресенье'];
+        const message = `Занятие группы "${group_name}" в ${dayNames[day_of_week]} в ${start_time.substring(0, 5)} было отменено администратором.`;
+        
+        for (const user of enrolledUsers.rows) {
+          await pool.query(`
+            INSERT INTO notifications (user_id, title, message, type)
+            VALUES ($1, $2, $3, $4)
+          `, [
+            user.user_id,
+            'Отмена занятия',
+            message,
+            'schedule_cancelled'
+          ]);
+        }
+      }
+    }
+    
+    // Удаляем занятие
+    await pool.query('DELETE FROM schedule WHERE id = $1', [id]);
+    
+    res.json({ message: 'Занятие успешно удалено из расписания' });
   } catch (err) {
-    console.error('Ошибка при удалении записи из расписания:', err);
+    console.error('Ошибка при удалении занятия:', err);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });

@@ -1,0 +1,197 @@
+.schedule-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.schedule-container h2 {
+  color: #0078d4;
+  margin-bottom: 20px;
+}
+
+.schedule-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+.filter-group label {
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+}
+
+.filter-group select {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+}
+
+.clear-filter-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-top: 21px;
+}
+
+.clear-filter-button:hover {
+  background-color: #5a6268;
+}
+
+.schedule-by-day {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.day-schedule {
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.day-header {
+  background-color: #f0f0f0;
+  padding: 12px 15px;
+  margin: 0;
+  color: #333;
+  font-weight: 600;
+}
+
+.schedule-items {
+  padding: 10px;
+}
+
+.schedule-item {
+  display: flex;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  align-items: center;
+}
+
+.schedule-item:last-child {
+  border-bottom: none;
+}
+
+.schedule-item.cancelled {
+  opacity: 0.7;
+  background-color: #f9f9f9;
+}
+
+.schedule-time {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  min-width: 120px;
+}
+
+.schedule-details {
+  flex-grow: 1;
+  margin: 0 15px;
+}
+
+.schedule-group {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.schedule-category {
+  color: #0078d4;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.schedule-pool,
+.schedule-coach,
+.schedule-occupancy {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 3px;
+}
+
+.schedule-actions {
+  min-width: 100px;
+  text-align: right;
+}
+
+.enroll-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.enroll-button:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.enroll-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.no-schedule {
+  padding: 30px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+  color: #666;
+  font-style: italic;
+}
+
+.loading {
+  padding: 30px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+.error-message {
+  padding: 10px 15px;
+  margin-bottom: 20px;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .schedule-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .schedule-time {
+    margin-bottom: 10px;
+  }
+  
+  .schedule-details {
+    margin: 0 0 10px 0;
+    width: 100%;
+  }
+  
+  .schedule-actions {
+    width: 100%;
+    text-align: left;
+  }
+}

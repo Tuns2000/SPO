@@ -1,0 +1,123 @@
+/* Обновленные стили для карточки расписания */
+
+.schedule-card {
+  background-color: #e6f2ff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.15);
+  padding: 20px;
+  width: auto;
+  max-width: 100%;
+  position: relative;
+  border-left: 5px solid #0078d4;
+  margin-bottom: 24px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.schedule-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px rgba(0, 120, 212, 0.2);
+}
+
+.schedule-card-id {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: #0078d4;
+  color: white;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.schedule-card-info {
+  width: 100%;
+  padding: 5px 0;
+}
+
+.schedule-card-row {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: baseline;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
+}
+
+.schedule-card-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.info-label {
+  font-weight: 600;
+  color: #555;
+  min-width: 90px;
+}
+
+.info-value {
+  display: inline-block;
+  color: #333;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+/* Специальное форматирование для времени */
+.schedule-card-row:nth-child(2) .info-value {
+  color: #0078d4;
+  font-weight: 600;
+}
+
+/* Специальное форматирование для бассейна */
+.schedule-card-row:nth-child(3) .info-value {
+  background-color: #f0f8ff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+/* Контейнер расписания */
+.schedule-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.schedule-title {
+  color: #0078d4;
+  margin-bottom: 30px;
+  font-size: 1.8rem;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 10px;
+}
+
+.schedule-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+/* Адаптивный дизайн для мобильных устройств */
+@media (max-width: 768px) {
+  .schedule-card {
+    width: 100%;
+  }
+}
+
+/* Стиль для даты - добавьте в конец файла */
+
+/* Выделяем первую строку (с датой) */
+.schedule-card-info .schedule-card-row:first-child {
+  border-bottom: 1px solid #c9e3ff;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.schedule-card-info .schedule-card-row:first-child .info-value {
+  font-weight: 600;
+  color: #0066b3;
+}

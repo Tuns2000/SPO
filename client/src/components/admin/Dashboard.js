@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Dashboard.css';
-import AdminOverviewComponent from './overview/overview'; // Переименовываем импорт или локальный компонент
-import AdminUsers from './users/users';
+import AdminUsers from '../AdminUsers'; // Добавлен импорт
+import AdminSchedule from './schedule/schedule';
 import AdminGroups from './groups/groups';
 import AdminCoaches from './coaches/coaches';
-import AdminPools from './pools/pools';
-import AdminSubscriptions from './subscriptions/subscriptions';
+import AdminPools from './pools/pools'; // Добавлен импорт AdminPools
+import AdminSubscriptions from './subscriptions/subscriptions'; // Добавлен импорт AdminSubscriptions
 
 const Dashboard = () => {
   const [users, setUsers] = useState([]);
@@ -81,6 +81,9 @@ const Dashboard = () => {
           <NavLink to="/admin-dashboard/groups">
             Группы
           </NavLink>
+          <NavLink to="/admin-dashboard/schedule">
+            Расписание
+          </NavLink>
           <NavLink to="/admin-dashboard/pools">
             Бассейны
           </NavLink>
@@ -103,6 +106,7 @@ const Dashboard = () => {
           <Route path="/users" element={<AdminUsers />} />
           <Route path="/coaches" element={<AdminCoaches />} />
           <Route path="/groups" element={<AdminGroups />} />
+          <Route path="/schedule" element={<AdminSchedule />} />
           <Route path="/pools" element={<AdminPools />} />
           <Route path="/subscriptions" element={<AdminSubscriptions />} />
         </Routes>
@@ -112,7 +116,7 @@ const Dashboard = () => {
 };
 
 // Переименуйте этот локальный компонент, чтобы избежать конфликта с импортом
-const AdminDashboardOverview = ({ loading, error, stats, users, fetchData }) => {
+const AdminOverviewComponent = ({ loading, error, stats, users, fetchData }) => {
   if (loading) return <div className="loading">Загрузка данных...</div>;
   if (error) return <div className="error-message">{error}</div>;
 

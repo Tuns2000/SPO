@@ -78,7 +78,7 @@ function App() {
             {role === 'admin' && (
               <>
                 <Link to="/admin-dashboard" className="nav-link special-link admin-link">Панель администратора</Link>
-              </>
+                </>
             )}
           </div>
           

@@ -145,7 +145,7 @@ function Subscription() {
             <h3>Месячный</h3>
             <p className="plan-price">5000 ₽</p>
             <ul className="plan-features">
-              <li>Неограниченные посещения</li>
+              <li>Два посещения</li>
               <li>Доступ ко всем зонам</li>
               <li>Действует 30 дней</li>
             </ul>
@@ -162,7 +162,7 @@ function Subscription() {
             <h3>Квартальный</h3>
             <p className="plan-price">12000 ₽</p>
             <ul className="plan-features">
-              <li>Неограниченные посещения</li>
+              <li>Три посещения</li>
               <li>Доступ ко всем зонам</li>
               <li>Действует 90 дней</li>
             </ul>
@@ -178,7 +178,7 @@ function Subscription() {
             <h3>Годовой</h3>
             <p className="plan-price">40000 ₽</p>
             <ul className="plan-features">
-              <li>Неограниченные посещения</li>
+              <li>Пять посещения</li>
               <li>Доступ ко всем зонам</li>
               <li>Действует 365 дней</li>
             </ul>

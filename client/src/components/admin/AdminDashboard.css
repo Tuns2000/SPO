@@ -1,0 +1,51 @@
+.admin-dashboard {
+  padding: 20px;
+}
+
+.admin-dashboard h2 {
+  color: #0078d4;
+  margin-bottom: 20px;
+}
+
+.dashboard-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.dashboard-card {
+  background-color: white;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 20px;
+  flex: 1;
+  min-width: 200px;
+  text-align: center;
+}
+
+.dashboard-card h3 {
+  color: #555;
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.card-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #0078d4;
+  margin: 15px 0;
+}
+
+.refresh-button {
+  background-color: #0078d4;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.refresh-button:hover {
+  background-color: #006abc;
+}
