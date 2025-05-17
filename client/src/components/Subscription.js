@@ -85,33 +85,49 @@ function Subscription() {
       : 'Бесплатно';
   }
 
-  // Добавьте функцию для определения активности абонемента
-  function isSubscriptionActive(subscription) {
+  // Заменяем функцию isSubscriptionActive на более универсальную функцию для определения статуса
+  function getSubscriptionStatus(subscription) {
+    // Если напрямую указан статус, используем его
+    if (subscription.status) {
+      return subscription.status; // 'active', 'suspended', 'canceled', 'expired'
+    }
+    
     const currentDate = new Date();
     const endDate = subscription.end_date ? new Date(subscription.end_date) : null;
     
     // Если есть прямой флаг is_expired
     if (subscription.is_expired) {
-      return false;
+      return 'expired';
     }
     
     // Если дата окончания в прошлом
     if (endDate && endDate < currentDate) {
-      return false;
-    }
-    
-    // Если у абонемента статус неактивный
-    if (subscription.status && subscription.status !== 'active') {
-      return false;
+      return 'expired';
     }
     
     // Если закончились посещения
     if (subscription.visits_left !== null && subscription.visits_left <= 0) {
-      return false;
+      return 'expired';
     }
     
     // По умолчанию считаем абонемент активным
-    return true;
+    return 'active';
+  }
+
+  // Функция для получения текста статуса на русском
+  function getStatusText(status) {
+    switch (status) {
+      case 'active':
+        return 'Активен';
+      case 'suspended':
+        return 'Приостановлен';
+      case 'canceled':
+        return 'Отменен';
+      case 'expired':
+        return 'Истек';
+      default:
+        return 'Неизвестно';
+    }
   }
 
   // Отображение списка абонементов и форм подписки
@@ -199,14 +215,14 @@ function Subscription() {
         ) : subscriptions.length > 0 ? (
           <div className="subscriptions-list">
             {subscriptions.map(sub => {
-              const isActive = isSubscriptionActive(sub);
+              const status = getSubscriptionStatus(sub);
               
               return (
-                <div key={sub.id} className={`subscription-item ${isActive ? 'active' : 'expired'}`}>
+                <div key={sub.id} className={`subscription-item ${status}`}>
                   <div className="subscription-header">
                     <h3>{sub.description || getSubscriptionName(sub.type)}</h3>
-                    <span className={`status-badge ${isActive ? 'active' : 'expired'}`}>
-                      {isActive ? 'Активен' : 'Истек'}
+                    <span className={`status-badge ${status}`}>
+                      {getStatusText(status)}
                     </span>
                   </div>
                   <div className="subscription-details">
