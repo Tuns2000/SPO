@@ -3,38 +3,29 @@ const router = express.Router();
 const pool = require('../db');
 const auth = require('../middleware/auth');
 
-// Маршрут для получения групп, в которые записан пользователь
+// Обновляем маршрут для получения записей пользователя с информацией о бассейне
 router.get('/enrollments', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     
-    // Исправляем обработку даты
-    const result = await pool.query(
-      `SELECT 
-         g.id as group_id,
-         g.name as group_name,
-         u.name as coach_name,
-         CASE 
-           WHEN ge.enrollment_date IS NULL THEN null
-           ELSE TO_CHAR(ge.enrollment_date, 'DD.MM.YYYY')
-         END as enrollment_date
-       FROM group_enrollments ge
-       JOIN groups g ON ge.group_id = g.id
-       JOIN coaches c ON g.coach_id = c.id
-       JOIN users u ON c.user_id = u.id
-       WHERE ge.user_id = $1 AND ge.status = 'active'
-       ORDER BY ge.enrollment_date DESC`,
-      [userId]
-    );
+    const enrollments = await pool.query(`
+      SELECT 
+        g.id AS group_id,
+        g.name AS group_name,
+        u.name AS coach_name,
+        p.name AS pool_name,
+        p.address AS pool_address,
+        TO_CHAR(ge.enrollment_date, 'DD.MM.YYYY') AS enrollment_date
+      FROM group_enrollments ge
+      JOIN groups g ON ge.group_id = g.id
+      LEFT JOIN coaches c ON g.coach_id = c.id
+      LEFT JOIN users u ON c.user_id = u.id
+      LEFT JOIN pools p ON g.pool_id = p.id
+      WHERE ge.user_id = $1 AND ge.status = 'active'
+      ORDER BY ge.enrollment_date DESC
+    `, [userId]);
     
-    // Проверяем и форматируем данные перед отправкой
-    const formattedResults = result.rows.map(row => ({
-      ...row,
-      enrollment_date: row.enrollment_date || '15.05.2025' // Используем фиксированную дату если null
-    }));
-    
-    res.json(formattedResults);
-    
+    res.json(enrollments.rows);
   } catch (err) {
     console.error('Ошибка при получении записей в группы:', err);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });

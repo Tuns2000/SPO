@@ -30,38 +30,35 @@ router.get('/', async (req, res) => {
 
 // Получение информации о конкретной группе
 router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-  
   try {
+    const groupId = req.params.id;
+    
+    // Запрос с JOIN-ами для получения данных о группе, тренере и бассейне
     const result = await db.query(`
-      SELECT g.*, c.specialty, u.name as coach_name, 
-             COUNT(ge.id) as enrolled_count
+      SELECT g.*, 
+        u.name AS coach_name,
+        p.id AS pool_id,
+        p.name AS pool_name,
+        p.address AS pool_address,
+        p.type AS pool_type,
+        COUNT(ge.id) FILTER (WHERE ge.status = 'active') AS enrolled_count
       FROM groups g
       LEFT JOIN coaches c ON g.coach_id = c.id
       LEFT JOIN users u ON c.user_id = u.id
-      LEFT JOIN group_enrollments ge ON g.id = ge.group_id AND ge.status = 'active'
+      LEFT JOIN pools p ON g.pool_id = p.id
+      LEFT JOIN group_enrollments ge ON g.id = ge.group_id
       WHERE g.id = $1
-      GROUP BY g.id, c.id, c.specialty, u.name
-    `, [id]);
+      GROUP BY g.id, u.name, p.id
+    `, [groupId]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Группа не найдена' });
     }
     
-    // Получаем расписание для этой группы
-    const scheduleResult = await db.query(`
-      SELECT * FROM schedules
-      WHERE group_id = $1 AND date >= CURRENT_DATE
-      ORDER BY date, time
-    `, [id]);
-    
-    const group = result.rows[0];
-    group.schedule = scheduleResult.rows;
-    
-    res.json(group);
+    res.json(result.rows[0]);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Ошибка сервера при получении информации о группе' });
+    console.error('Ошибка при получении информации о группе:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
 
@@ -285,6 +282,87 @@ router.delete('/:groupId/enroll', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Ошибка сервера при отмене записи' });
+  }
+});
+
+// Добавление группы в бассейн (только для админа)
+router.post('/pool/:poolId', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+  try {
+    const poolId = req.params.poolId;
+    const { name, coachId, capacity, category, description } = req.body;
+    
+    // Проверка существования бассейна
+    const poolCheck = await db.query('SELECT * FROM pools WHERE id = $1', [poolId]);
+    if (poolCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Бассейн не найден' });
+    }
+    
+    // Проверка категории группы
+    if (!['beginners', 'teenagers', 'adults', 'athletes'].includes(category)) {
+      return res.status(400).json({ error: 'Неверная категория группы' });
+    }
+    
+    // Проверка существования тренера и его принадлежности к данному бассейну
+    const coachCheck = await db.query(
+      'SELECT * FROM coaches WHERE id = $1 AND pool_id = $2',
+      [coachId, poolId]
+    );
+    if (coachCheck.rows.length === 0) {
+      return res.status(400).json({ error: 'Тренер не найден или не относится к указанному бассейну' });
+    }
+    
+    // Создание группы
+    const result = await db.query(
+      `INSERT INTO groups (name, coach_id, capacity, description, category, pool_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [name, coachId, capacity, description, category, poolId]
+    );
+    
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Ошибка при создании группы:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Удаление группы из бассейна (только для админа)
+router.delete('/pool/:poolId/:groupId', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+  try {
+    const { poolId, groupId } = req.params;
+    
+    // Проверка существования группы в указанном бассейне
+    const groupCheck = await db.query(
+      'SELECT * FROM groups WHERE id = $1 AND pool_id = $2',
+      [groupId, poolId]
+    );
+    if (groupCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Группа не найдена в указанном бассейне' });
+    }
+    
+    // Отменяем все записи в эту группу
+    await db.query(
+      `UPDATE group_enrollments SET status = 'cancelled'
+       WHERE group_id = $1 AND status = 'active'`,
+      [groupId]
+    );
+    
+    // Удаляем все расписания для группы
+    await db.query(
+      'DELETE FROM schedules WHERE group_id = $1',
+      [groupId]
+    );
+    
+    // Удаляем группу
+    await db.query(
+      'DELETE FROM groups WHERE id = $1',
+      [groupId]
+    );
+    
+    res.json({ message: 'Группа успешно удалена из бассейна' });
+  } catch (err) {
+    console.error('Ошибка при удалении группы:', err);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
 

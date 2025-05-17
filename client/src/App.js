@@ -10,6 +10,10 @@ import GroupDetail from './components/groups/GroupDetail';
 import CoachDashboard from './components/coach/CoachDashboard';
 import AdminDashboard from './components/admin/Dashboard';
 import MyEnrollments from './components/user/MyEnrollments';
+import PoolList from './components/pools/PoolList';
+import PoolDetail from './components/pools/PoolDetail';
+import EditPool from './components/pools/EditPool';
+import AddGroupToPool from './components/pools/AddGroupToPool';
 import './components/groups/Group.css';
 
 import './styles/App.css';
@@ -32,6 +36,7 @@ function App() {
         <div className="nav-links">
           <Link to="/" className="nav-link">Расписание</Link>
           <Link to="/groups" className="nav-link">Группы</Link>
+          <Link to="/pools" className="nav-link">Бассейны</Link>
           
           {/* Ссылки для неавторизованных пользователей */}
           {!username && (
@@ -95,6 +100,8 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/groups" element={<GroupList />} />
         <Route path="/groups/:id" element={<GroupDetail />} />
+        <Route path="/pools" element={<PoolList />} />
+        <Route path="/pools/:id" element={<PoolDetail />} />
         
         {/* Защищенные маршруты - только для авторизованных пользователей */}
         <Route
@@ -127,6 +134,14 @@ function App() {
             username ? <MyEnrollments /> : <AccessDenied />
           }
         />
+        
+        {/* Если нужно, добавьте маршруты для админа */}
+        {role === 'admin' && (
+          <>
+            <Route path="/pools/:id/edit" element={<EditPool />} />
+            <Route path="/pools/:id/add-group" element={<AddGroupToPool />} />
+          </>
+        )}
       </Routes>
       
       <div className="wave-footer"></div>

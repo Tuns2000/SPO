@@ -7,15 +7,13 @@ const MyEnrollments = () => {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  const token = localStorage.getItem('token');
 
-  // Загрузка записей в группы при монтировании компонента
+  const token = localStorage.getItem('token');
+  
   useEffect(() => {
     loadEnrollments();
   }, []);
-
-  // Функция для загрузки записей в группы
+  
   const loadEnrollments = async () => {
     setLoading(true);
     try {
@@ -23,7 +21,6 @@ const MyEnrollments = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Важно: напрямую используем данные с сервера без дополнительного форматирования
       console.log('Данные о записях:', response.data);
       setEnrollments(response.data);
       setLoading(false);
@@ -33,27 +30,22 @@ const MyEnrollments = () => {
       setError('Не удалось загрузить записи в группы');
     }
   };
-
-  // Функция отмены записи в группу
-  const handleCancelEnrollment = async (groupId) => {
-    if (!window.confirm('Вы уверены, что хотите отменить запись в эту группу?')) {
-      return;
-    }
-    
+  
+  const cancelEnrollment = async (groupId) => {
     try {
-      await axios.delete(`http://localhost:3000/api/group/${groupId}/enroll`, {
+      await axios.delete(`http://localhost:3000/api/user/enrollments/${groupId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      alert('Запись в группу успешно отменена');
+      alert('Запись успешно отменена');
+      // Перезагружаем список после отмены
       loadEnrollments();
-    } catch (error) {
-      console.error('Ошибка при отмене записи:', error);
-      alert('Не удалось отменить запись в группу');
+    } catch (err) {
+      console.error('Ошибка при отмене записи:', err);
+      alert('Не удалось отменить запись');
     }
   };
 
-  // Отображение компонента
   return (
     <div className="my-enrollments-container">
       <h2>Мои группы</h2>
@@ -69,16 +61,16 @@ const MyEnrollments = () => {
               <h3>{enrollment.group_name}</h3>
               <div className="enrollment-info">
                 <p><strong>Тренер:</strong> {enrollment.coach_name || 'Не указан'}</p>
-                {/* Используем строковое представление даты напрямую */}
+                <p><strong>Бассейн:</strong> {enrollment.pool_name || 'Не указан'}</p>
                 <p><strong>Дата записи:</strong> {enrollment.enrollment_date || '15.05.2025'}</p>
               </div>
               <div className="enrollment-actions">
-                <Link to={`/groups/${enrollment.group_id}`} className="enrollment-button">
+                <Link to={`/groups/${enrollment.group_id}`} className="enrollment-button view">
                   Подробнее
                 </Link>
                 <button 
-                  className="enrollment-button cancel-button"
-                  onClick={() => handleCancelEnrollment(enrollment.group_id)}
+                  className="enrollment-button cancel"
+                  onClick={() => cancelEnrollment(enrollment.group_id)}
                 >
                   Отменить запись
                 </button>

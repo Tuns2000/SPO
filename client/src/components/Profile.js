@@ -190,7 +190,7 @@ function Profile() {
             {role === 'admin' && (
               <div className="role-specific-actions">
                 <Link to="/admin-dashboard" className="profile-link-button admin-button">
-                  Перейти в панель администратора
+                  Панель администратора
                 </Link>
                 <Link to="/admin-dashboard/users" className="profile-link-button">
                   Управление пользователями
@@ -200,6 +200,9 @@ function Profile() {
                 </Link>
                 <Link to="/admin-dashboard/coaches" className="profile-link-button">
                   Управление тренерами
+                </Link>
+                <Link to="/admin-dashboard/pools" className="profile-link-button">
+                  Управление бассейнами
                 </Link>
               </div>
             )}
@@ -219,6 +222,10 @@ function Profile() {
                     <div className="enrollment-group">{enrollment.group_name}</div>
                     <div className="enrollment-details">
                       <span>Тренер: {enrollment.coach_name}</span>
+                      {/* Добавляем отображение бассейна */}
+                      <span className="enrollment-pool">
+                        Бассейн: {enrollment.pool_name || 'Не указан'}
+                      </span>
                     </div>
                   </div>
                   <Link to={`/groups/${enrollment.group_id}`} className="enrollment-view-button">

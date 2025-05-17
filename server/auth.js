@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('./db'); // Исправлен путь импорта
+const db = require('./db'); 
 
 // Регистрация
 router.post('/register', async (req, res) => {

@@ -4,8 +4,11 @@ const dotenv = require('dotenv');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const helmet = require('helmet');
-const { initDB } = require('./models/init-db');
+const { initDB } = require('./init-db');
 const { addDescriptionColumn } = require('./migrations/add-description-column');
+const { addPoolIdColumn } = require('./migrations/add-pool-id-column');
+const { addVisitsPerWeekColumn } = require('./migrations/add-visits-per-week-column');
+const { addPoolIdToGroups } = require('./migrations/add-pool-id-to-groups');
 const errorHandler = require('./middleware/errorHandler');
 const requestLogger = require('./middleware/requestLogger');
 const swaggerOptions = require('./utils/swagger');
@@ -32,6 +35,9 @@ async function initialize() {
   try {
     await initDB();
     await addDescriptionColumn();
+    await addPoolIdColumn();
+    await addVisitsPerWeekColumn();
+    await addPoolIdToGroups();
     logger.info('База данных и миграции инициализированы');
   } catch (err) {
     logger.error('Ошибка при инициализации:', { error: err.message });
@@ -54,6 +60,8 @@ app.use('/api/user', require('./routes/user'));
 app.use('/api/notification', require('./routes/notification'));
 app.use('/api/coach', require('./routes/coach'));
 app.use('/api/schedule', require('./routes/schedule'));
+app.use('/api/pools', require('./routes/pool'));
+app.use('/api/admin', require('./routes/admin')); // Добавлено новое подключение маршрута
 
 // Маршрут для проверки работоспособности сервера
 app.get('/api/health', (req, res) => {
