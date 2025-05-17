@@ -227,77 +227,47 @@
 }
 
 .schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-top: 15px;
 }
 
 .schedule-item {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 15px;
-  padding: 12px 0;
-  border-bottom: 1px solid #e3f2fd;
-  align-items: center;
+  background-color: #f5f9ff;
+  border-left: 4px solid #0078d4;
+  padding: 12px 15px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .schedule-item:last-child {
   border-bottom: none;
 }
 
-.schedule-date {
-  font-weight: 500;
+.schedule-day {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 5px;
   color: #333;
 }
 
 .schedule-time {
-  font-weight: 600;
-  color: #0277bd;
+  font-size: 15px;
+  color: #0078d4;
+  margin-bottom: 5px;
 }
 
-.schedule-status {
-  padding: 5px 10px;
-  border-radius: 15px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-align: center;
+.schedule-location {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 5px;
 }
 
-.status-scheduled {
-  background-color: #e3f2fd;
-  color: #0277bd;
-}
-
-.status-completed {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.status-cancelled {
-  background-color: #ffebee;
-  color: #c62828;
-}
-
-.success-message {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-  padding: 15px;
-  border-radius: 5px;
-  margin-bottom: 15px;
-}
-
-.secondary-button {
-  display: inline-block;
-  padding: 10px 15px;
-  background-color: #f0f0f0;
-  color: #333;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.3s;
-}
-
-.secondary-button:hover {
-  background-color: #e0e0e0;
+.schedule-coach {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
 }
 
 /* Добавляем эти стили в конец файла Group.css */

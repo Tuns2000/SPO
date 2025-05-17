@@ -175,4 +175,36 @@ router.get('/my-enrollments', verifyToken, async (req, res) => {
   }
 });
 
+// Получение расписания группы по ID
+router.get('/group/:id', async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    
+    // Исправленный запрос - используем g.coach_id вместо s.coach_id
+    const result = await pool.query(`
+      SELECT 
+        s.id, 
+        s.day_of_week, 
+        s.start_time, 
+        s.end_time,
+        g.name AS group_name,
+        p.name AS pool_name,
+        p.address AS pool_address,
+        u.name AS coach_name
+      FROM schedule s
+      JOIN groups g ON s.group_id = g.id
+      LEFT JOIN pools p ON g.pool_id = p.id
+      LEFT JOIN coaches c ON g.coach_id = c.id  /* Изменено с s.coach_id на g.coach_id */
+      LEFT JOIN users u ON c.user_id = u.id
+      WHERE g.id = $1
+      ORDER BY s.day_of_week, s.start_time
+    `, [groupId]);
+    
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Ошибка при получении расписания группы:', err);
+    res.status(500).json({ error: 'Ошибка при получении расписания группы' });
+  }
+});
+
 module.exports = router;

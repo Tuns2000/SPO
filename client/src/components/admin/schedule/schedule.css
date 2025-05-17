@@ -449,3 +449,8 @@
 .schedule-card.friday { border-left-color: #f54242; }
 .schedule-card.saturday { border-left-color: #9642f5; }
 .schedule-card.sunday { border-left-color: #42f5f2; }
+
+/* Если вам нужно добавить специфические стили для строки с названием группы */
+.schedule-info-row:first-child {
+  font-weight: 500;
+}

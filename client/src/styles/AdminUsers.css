@@ -4,34 +4,24 @@
   margin: 0 auto;
 }
 
-.admin-users-container h2 {
+.admin-users-container h1 {
   margin-bottom: 20px;
-  color: #2c3e50;
-}
-
-.error-message {
-  background-color: #ffeeee;
-  border: 1px solid #ffbdbd;
-  color: #d8000c;
-  padding: 10px;
-  border-radius: 5px;
-  margin-bottom: 20px;
-}
-
-.success-message {
-  background-color: #dff2bf;
-  border: 1px solid #4f8a10;
-  color: #4f8a10;
-  padding: 10px;
-  border-radius: 5px;
-  margin-bottom: 20px;
+  color: #0277bd;
 }
 
 .loading {
-  padding: 20px;
   text-align: center;
+  padding: 40px;
+  font-size: 18px;
   color: #666;
-  font-style: italic;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
 }
 
 .users-table-container {
@@ -41,9 +31,8 @@
 .users-table {
   width: 100%;
   border-collapse: collapse;
-  border-spacing: 0;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .users-table th,
@@ -53,98 +42,99 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
-.users-table thead th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: #495057;
+.users-table th {
+  background-color: #f5f5f5;
+  font-weight: 500;
+  color: #333;
 }
 
-.users-table tbody tr:hover {
-  background-color: #f1f5f9;
+.users-table tr:hover {
+  background-color: #f9f9f9;
 }
 
 .role-badge {
   display: inline-block;
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 0.85em;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
   font-weight: 500;
 }
 
 .role-badge.admin {
-  background-color: #e74c3c;
-  color: #fff;
+  background-color: #e3f2fd;
+  color: #0277bd;
 }
 
 .role-badge.coach {
-  background-color: #3498db;
-  color: #fff;
+  background-color: #e8f5e9;
+  color: #2e7d32;
 }
 
 .role-badge.client {
-  background-color: #2ecc71;
-  color: #fff;
+  background-color: #f5f5f5;
+  color: #616161;
 }
 
-.actions-cell {
-  white-space: nowrap;
+.action-buttons {
+  display: flex;
+  gap: 8px;
 }
 
 .edit-button,
 .delete-button {
-  margin-right: 8px;
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-weight: 500;
+  font-size: 0.9em;
+  transition: background-color 0.2s;
 }
 
 .edit-button {
-  background-color: #3498db;
-  color: white;
+  background-color: #e3f2fd;
+  color: #0277bd;
 }
 
 .edit-button:hover {
-  background-color: #2980b9;
+  background-color: #bbdefb;
 }
 
 .delete-button {
-  background-color: #e74c3c;
-  color: white;
+  background-color: #ffebee;
+  color: #c62828;
 }
 
 .delete-button:hover {
-  background-color: #c0392b;
+  background-color: #ffcdd2;
 }
 
-/* Стили модального окна */
+/* Стили для модального окна */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   z-index: 1000;
 }
 
-.edit-user-modal {
-  background: white;
-  padding: 25px;
+.modal-content {
+  background-color: white;
   border-radius: 8px;
-  width: 90%;
+  padding: 20px;
+  width: 100%;
   max-width: 500px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
-.edit-user-modal h3 {
+.modal-content h2 {
   margin-top: 0;
   margin-bottom: 20px;
-  color: #2c3e50;
+  color: #0277bd;
 }
 
 .form-group {
@@ -155,48 +145,48 @@
   display: block;
   margin-bottom: 5px;
   font-weight: 500;
-  color: #555;
+  color: #333;
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
   border-radius: 4px;
   font-size: 16px;
 }
 
 .modal-actions {
-  margin-top: 25px;
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
 }
 
-.cancel-button,
-.save-button {
+.save-button,
+.cancel-button {
   padding: 8px 16px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-weight: 500;
-}
-
-.cancel-button {
-  background-color: #95a5a6;
-  color: white;
-  margin-right: 10px;
+  font-size: 16px;
 }
 
 .save-button {
-  background-color: #2ecc71;
+  background-color: #0277bd;
   color: white;
 }
 
-.cancel-button:hover {
-  background-color: #7f8c8d;
+.save-button:hover {
+  background-color: #01579b;
 }
 
-.save-button:hover {
-  background-color: #27ae60;
+.cancel-button {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.cancel-button:hover {
+  background-color: #ccc;
 }

@@ -12,6 +12,7 @@ const { addPoolIdToGroups } = require('./migrations/add-pool-id-to-groups');
 const { addCategoryColumn } = require('./migrations/add-category-column');
 const { addScheduleTable } = require('./migrations/add-schedule-table');
 const { addUpdatedAtColumn } = require('./migrations/add-updated-at-column');
+const { addCoachPoolTable } = require('./migrations/add-coach-pool-table');
 const errorHandler = require('./middleware/errorHandler');
 const requestLogger = require('./middleware/requestLogger');
 const swaggerOptions = require('./utils/swagger');
@@ -43,7 +44,8 @@ async function initialize() {
     await addPoolIdToGroups();
     await addCategoryColumn();
     await addScheduleTable();
-    await addUpdatedAtColumn(); // Добавляем новую миграцию
+    await addUpdatedAtColumn();
+    await addCoachPoolTable(); // Добавляем новую миграцию
     logger.info('База данных и миграции инициализированы');
   } catch (err) {
     logger.error('Ошибка при инициализации:', { error: err.message });
@@ -72,6 +74,9 @@ app.use('/api/admin', adminRoutes); // Добавлено новое подкл�
 
 const subscriptionRoutes = require('./routes/subscriptions');
 app.use('/api', subscriptionRoutes);
+
+const analyticsRoutes = require('./routes/analytics');
+app.use('/api/analytics', analyticsRoutes);
 
 // Маршрут для проверки работоспособности сервера
 app.get('/api/health', (req, res) => {

@@ -8,6 +8,7 @@ import AdminGroups from './groups/groups';
 import AdminCoaches from './coaches/coaches';
 import AdminPools from './pools/pools'; // Добавлен импорт AdminPools
 import AdminSubscriptions from './subscriptions/subscriptions'; // Добавлен импорт AdminSubscriptions
+import Analytics from './Analytics'; // Правильный импорт нового компонента аналитики
 
 const Dashboard = () => {
   const [users, setUsers] = useState([]);
@@ -90,6 +91,9 @@ const Dashboard = () => {
           <NavLink to="/admin-dashboard/subscriptions">
             Абонементы
           </NavLink>
+          <NavLink to="/admin-dashboard/analytics"> {/* Новый пункт меню для аналитики */}
+            Аналитика
+          </NavLink>
         </nav>
       </div>
       <div className="admin-content">
@@ -109,6 +113,7 @@ const Dashboard = () => {
           <Route path="/schedule" element={<AdminSchedule />} />
           <Route path="/pools" element={<AdminPools />} />
           <Route path="/subscriptions" element={<AdminSubscriptions />} />
+          <Route path="/analytics" element={<Analytics />} /> {/* Новый маршрут для аналитики */}
         </Routes>
       </div>
     </div>

@@ -10,26 +10,64 @@ const GroupDetail = () => {
   const [enrolling, setEnrolling] = useState(false);
   const [enrollMessage, setEnrollMessage] = useState(null);
   
+  // Добавляем отдельное состояние для расписания
+  const [schedule, setSchedule] = useState([]);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [scheduleError, setScheduleError] = useState(null);
+  
   const { id } = useParams();
   const navigate = useNavigate();
   
   const token = localStorage.getItem('token');
   const isAuthenticated = !!token;
 
-  useEffect(() => {
-    const fetchGroupDetails = async () => {
-      try {
-        const response = await axios.get(`http://localhost:3000/api/group/${id}`);
-        setGroup(response.data);
-        setLoading(false);
-      } catch (err) {
-        console.error('Ошибка при загрузке информации о группе:', err);
-        setError(err.response?.data?.error || 'Не удалось загрузить информацию о группе');
-        setLoading(false);
-      }
-    };
+  // Функция для загрузки деталей группы
+  const fetchGroupDetails = async () => {
+    try {
+      const response = await axios.get(`http://localhost:3000/api/group/${id}`);
+      setGroup(response.data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Ошибка при загрузке информации о группе:', err);
+      setError(err.response?.data?.error || 'Не удалось загрузить информацию о группе');
+      setLoading(false);
+    }
+  };
 
+  // Отдельная функция для загрузки расписания группы
+  const fetchGroupSchedule = async () => {
+    if (!id) return;
+    
+    setScheduleLoading(true);
+    try {
+      const response = await axios.get(`http://localhost:3000/api/schedule/group/${id}`);
+      setSchedule(response.data);
+      setScheduleError(null);
+    } catch (err) {
+      console.error('Ошибка при загрузке расписания группы:', err);
+      setScheduleError('Не удалось загрузить расписание занятий');
+      // Если расписания нет, устанавливаем пустой массив
+      setSchedule([]);
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  // Загрузка деталей группы при первом рендере
+  useEffect(() => {
     fetchGroupDetails();
+  }, [id]);
+  
+  // Загрузка расписания группы при первом рендере и запуск интервала обновления
+  useEffect(() => {
+    // Первичная загрузка расписания
+    fetchGroupSchedule();
+    
+    // Настройка интервала обновления (каждые 30 секунд)
+    const scheduleInterval = setInterval(fetchGroupSchedule, 30000);
+    
+    // Очистка интервала при размонтировании компонента
+    return () => clearInterval(scheduleInterval);
   }, [id]);
 
   const handleEnrollment = async () => {
@@ -126,6 +164,49 @@ const GroupDetail = () => {
     );
   }
 
+  // Функция для получения названия дня недели по номеру
+  const getDayOfWeekName = (dayNumber) => {
+    const days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+    return days[dayNumber - 1] || 'Неизвестный день';
+  };
+
+  // Измените раздел отображения расписания:
+  const renderSchedule = () => {
+    if (scheduleLoading && schedule.length === 0) {
+      return <p>Загрузка расписания...</p>;
+    }
+    
+    if (scheduleError) {
+      return <p className="error-message">{scheduleError}</p>;
+    }
+    
+    if (schedule.length === 0) {
+      return <p>Расписание занятий пока не составлено</p>;
+    }
+    
+    return (
+      <div className="schedule-list">
+        {schedule.map((item) => (
+          <div className="schedule-item" key={item.id}>
+            <div className="schedule-day">
+              {getDayOfWeekName(item.day_of_week)}
+            </div>
+            <div className="schedule-time">
+              {item.start_time?.substr(0, 5) || '00:00'} - 
+              {item.end_time?.substr(0, 5) || '00:00'}
+            </div>
+            <div className="schedule-location">
+              {item.pool_name || 'Не указан'}
+            </div>
+            <div className="schedule-coach">
+              Тренер: {item.coach_name || 'Не назначен'}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="group-detail-container">
       <button className="back-button" onClick={() => navigate('/groups')}>
@@ -213,32 +294,7 @@ const GroupDetail = () => {
             <div className="group-detail-right">
               <div className="schedule-block">
                 <h3>Расписание занятий</h3>
-                {group.schedule && group.schedule.length > 0 ? (
-                  <div className="schedule-list">
-                    {group.schedule.map((item, index) => {
-                      const scheduleDate = new Date(item.date);
-                      const formattedDate = scheduleDate.toLocaleDateString('ru-RU', {
-                        weekday: 'long', 
-                        day: 'numeric', 
-                        month: 'long'
-                      });
-                      
-                      return (
-                        <div className="schedule-item" key={index}>
-                          <div className="schedule-date">{formattedDate}</div>
-                          <div className="schedule-time">{item.time.slice(0, 5)}</div>
-                          <div className={`schedule-status status-${item.status}`}>
-                            {item.status === 'scheduled' ? 'Запланировано' : 
-                             item.status === 'completed' ? 'Проведено' : 
-                             item.status === 'cancelled' ? 'Отменено' : item.status}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p>Расписание занятий пока не составлено</p>
-                )}
+                {renderSchedule()}
               </div>
             </div>
           </div>

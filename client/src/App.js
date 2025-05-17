@@ -30,6 +30,9 @@ import './styles/App.css';
 import AdminSchedule from './components/admin/schedule/schedule';
 import AdminGroups from './components/admin/groups/groups';
 import AdminCoaches from './components/admin/coaches/coaches';
+import AdminUsers from './components/admin/AdminUsers';
+import AdminSubscriptions from './components/admin/subscriptions/subscriptions';
+import Analytics from './components/admin/Analytics';
 
 function App() {
   const username = localStorage.getItem('user');
@@ -157,6 +160,9 @@ function App() {
               <Route path="/admin/schedule" element={<AdminSchedule />} />
               <Route path="/admin/groups" element={<AdminGroups />} />
               <Route path="/admin/coaches" element={<AdminCoaches />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+              <Route path="/admin/analytics" element={<Analytics />} />
             </>
           )}
         </Routes>

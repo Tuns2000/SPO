@@ -58,6 +58,12 @@ function Schedule() {
                   </span>
                 </div>
                 
+                {/* Добавляем строку с названием группы */}
+                <div className="schedule-card-row">
+                  <span className="info-label">Группа:</span>
+                  <span className="info-value">{schedule.group_name || 'Не указана'}</span>
+                </div>
+        
                 <div className="schedule-card-row">
                   <span className="info-label">Тренер:</span>
                   <span className="info-value">{schedule.coach_name || 'Не назначен'}</span>
