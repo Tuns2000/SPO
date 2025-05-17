@@ -125,28 +125,54 @@ router.post('/groups', verifyToken, authorizeAdmin, async (req, res) => {
     
     // Проверка валидности тренера, если указан
     if (coach_id) {
-      const coachCheck = await pool.query('SELECT id FROM coaches WHERE id = $1', [coach_id]);
+      const coachCheck = await pool.query('SELECT * FROM coaches WHERE id = $1', [coach_id]);
       if (coachCheck.rows.length === 0) {
         return res.status(400).json({ error: 'Указанный тренер не существует' });
       }
-    }
-    
-    // Проверка валидности бассейна, если указан
-    if (pool_id) {
-      const poolCheck = await pool.query('SELECT id FROM pools WHERE id = $1', [pool_id]);
-      if (poolCheck.rows.length === 0) {
-        return res.status(400).json({ error: 'Указанный бассейн не существует' });
+      
+      // Проверяем, что тренер назначен в бассейн и что это совпадает с указанным бассейном
+      const coachPoolCheck = await pool.query('SELECT pool_id FROM coaches WHERE id = $1', [coach_id]);
+      
+      if (!coachPoolCheck.rows[0].pool_id) {
+        return res.status(400).json({ error: 'Выбранному тренеру не назначен бассейн' });
       }
+      
+      // Если указан и бассейн, и тренер, проверяем их соответствие
+      if (pool_id && coachPoolCheck.rows[0].pool_id != pool_id) {
+        return res.status(400).json({ 
+          error: 'Несоответствие бассейна. Тренер работает в другом бассейне.' 
+        });
+      }
+      
+      // Используем бассейн тренера, если бассейн не указан
+      const poolIdToUse = pool_id || coachPoolCheck.rows[0].pool_id;
+      
+      // Создаем новую группу с бассейном тренера
+      const result = await pool.query(`
+        INSERT INTO groups (name, capacity, description, coach_id, pool_id, category)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `, [name, capacity, description, coach_id, poolIdToUse, category]);
+      
+      res.status(201).json(result.rows[0]);
+    } else {
+      // Проверка валидности бассейна, если тренер не указан
+      if (pool_id) {
+        const poolCheck = await pool.query('SELECT id FROM pools WHERE id = $1', [pool_id]);
+        if (poolCheck.rows.length === 0) {
+          return res.status(400).json({ error: 'Указанный бассейн не существует' });
+        }
+      }
+      
+      // Создаем новую группу
+      const result = await pool.query(`
+        INSERT INTO groups (name, capacity, description, coach_id, pool_id, category)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `, [name, capacity, description, coach_id, pool_id, category]);
+      
+      res.status(201).json(result.rows[0]);
     }
-    
-    // Создаем новую группу
-    const result = await pool.query(`
-      INSERT INTO groups (name, capacity, description, coach_id, pool_id, category)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *
-    `, [name, capacity, description, coach_id, pool_id, category]);
-    
-    res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('Ошибка при создании группы:', err);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -157,39 +183,55 @@ router.post('/groups', verifyToken, authorizeAdmin, async (req, res) => {
 router.put('/groups/:id', verifyToken, authorizeAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, capacity, description, coach_id, pool_id, category } = req.body;
+    const { name, coach_id, pool_id, capacity, description, category } = req.body;
     
-    // Валидация входных данных
-    if (!name || !capacity) {
-      return res.status(400).json({ error: 'Название и вместимость обязательны' });
-    }
-    
-    // Проверяем существование группы
-    const groupCheck = await pool.query('SELECT * FROM groups WHERE id = $1', [id]);
-    if (groupCheck.rows.length === 0) {
+    // Проверка существования группы
+    const groupResult = await pool.query('SELECT * FROM groups WHERE id = $1', [id]);
+    if (groupResult.rows.length === 0) {
       return res.status(404).json({ error: 'Группа не найдена' });
     }
     
-    // Проверка валидности тренера, если указан
+    // Определяем параметры, которые будем использовать для обновления
+    let coachIdParam = coach_id || null;
+    let poolIdParam = pool_id || null;
+    
+    // Проверка на существование тренера и связанных ограничений
     if (coach_id) {
-      const coachCheck = await pool.query('SELECT id FROM coaches WHERE id = $1', [coach_id]);
+      const coachCheck = await pool.query('SELECT * FROM coaches WHERE id = $1', [coach_id]);
       if (coachCheck.rows.length === 0) {
         return res.status(400).json({ error: 'Указанный тренер не существует' });
       }
+      
+      // Проверяем, что тренер назначен в бассейн
+      const coachPoolCheck = await pool.query('SELECT pool_id FROM coaches WHERE id = $1', [coach_id]);
+      
+      if (!coachPoolCheck.rows[0].pool_id) {
+        return res.status(400).json({ error: 'Выбранному тренеру не назначен бассейн' });
+      }
+      
+      // Если указан и бассейн, и тренер, проверяем их соответствие
+      if (pool_id && coachPoolCheck.rows[0].pool_id != pool_id) {
+        return res.status(400).json({ 
+          error: 'Несоответствие бассейна. Тренер работает в другом бассейне.' 
+        });
+      }
+      
+      // Используем бассейн тренера для группы
+      poolIdParam = coachPoolCheck.rows[0].pool_id;
     }
     
-    // Проверка валидности бассейна, если указан
-    if (pool_id) {
-      const poolCheck = await pool.query('SELECT id FROM pools WHERE id = $1', [pool_id]);
-      if (poolCheck.rows.length === 0) {
+    // Проверка на существование бассейна, если тренер не указан
+    if (!coach_id && pool_id) {
+      const poolResult = await pool.query('SELECT * FROM pools WHERE id = $1', [pool_id]);
+      if (poolResult.rows.length === 0) {
         return res.status(400).json({ error: 'Указанный бассейн не существует' });
       }
     }
     
     // Проверка вместимости - не меньше, чем уже записано
     const enrolledCount = await pool.query(
-      'SELECT COUNT(*) FROM group_enrollments WHERE group_id = $1',
-      [id]
+      'SELECT COUNT(*) FROM group_enrollments WHERE group_id = $1 AND status = $2',
+      [id, 'active']
     );
     
     const currentEnrolledCount = parseInt(enrolledCount.rows[0].count, 10);
@@ -199,15 +241,48 @@ router.put('/groups/:id', verifyToken, authorizeAdmin, async (req, res) => {
       });
     }
     
-    // Обновляем группу
-    const result = await pool.query(`
-      UPDATE groups
-      SET name = $1, capacity = $2, description = $3, coach_id = $4, pool_id = $5, category = $6
+    // Обновление данных группы
+    const updateQuery = `
+      UPDATE groups 
+      SET 
+        name = COALESCE($1, name),
+        coach_id = $2,
+        pool_id = $3,
+        capacity = COALESCE($4, capacity),
+        description = COALESCE($5, description),
+        category = COALESCE($6, category)
       WHERE id = $7
       RETURNING *
-    `, [name, capacity, description, coach_id, pool_id, category, id]);
+    `;
     
-    res.json(result.rows[0]);
+    const result = await pool.query(updateQuery, [
+      name, 
+      coachIdParam, 
+      poolIdParam, 
+      capacity, 
+      description, 
+      category, 
+      id
+    ]);
+    
+    // Получаем подробную информацию о группе для ответа
+    const groupDetailQuery = `
+      SELECT g.*, 
+             c.id AS coach_id, u.name AS coach_name, 
+             p.name AS pool_name,
+             COUNT(ge.id) FILTER (WHERE ge.status = 'active') AS enrolled_count
+      FROM groups g
+      LEFT JOIN coaches c ON g.coach_id = c.id
+      LEFT JOIN users u ON c.user_id = u.id
+      LEFT JOIN pools p ON g.pool_id = p.id
+      LEFT JOIN group_enrollments ge ON g.id = ge.group_id
+      WHERE g.id = $1
+      GROUP BY g.id, c.id, u.name, p.name
+    `;
+    
+    const detailResult = await pool.query(groupDetailQuery, [id]);
+    
+    res.json(detailResult.rows[0]);
   } catch (err) {
     console.error('Ошибка при обновлении группы:', err);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -274,6 +349,27 @@ router.put('/coaches/:id', verifyToken, authorizeAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Тренер не найден' });
     }
     
+    // Преобразование experience в целое число или null, если пустая строка или не число
+    let experienceParam = null;
+    if (experience !== undefined && experience !== '') {
+      const parsedExperience = parseInt(experience, 10);
+      if (!isNaN(parsedExperience)) {
+        experienceParam = parsedExperience;
+      }
+    }
+    
+    // Преобразование pool_id в число или null
+    let poolIdParam = null;
+    if (pool_id !== undefined && pool_id !== '') {
+      poolIdParam = parseInt(pool_id, 10);
+      
+      // Проверка существования бассейна
+      const poolCheck = await pool.query('SELECT id FROM pools WHERE id = $1', [poolIdParam]);
+      if (poolCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Указанный бассейн не существует' });
+      }
+    }
+    
     // Обновление данных тренера
     const updateQuery = `
       UPDATE coaches 
@@ -286,11 +382,10 @@ router.put('/coaches/:id', verifyToken, authorizeAdmin, async (req, res) => {
       RETURNING *
     `;
     
-    let poolIdParam = pool_id || null;
     const result = await pool.query(updateQuery, [
-      specialty, 
-      experience, 
-      description, 
+      specialty || null, 
+      experienceParam, 
+      description || null, 
       poolIdParam,
       id
     ]);
@@ -357,20 +452,54 @@ router.put('/groups/:id', verifyToken, authorizeAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Группа не найдена' });
     }
     
-    // Проверка на существование тренера, если указан
+    // Определяем параметры, которые будем использовать для обновления
+    let coachIdParam = coach_id || null;
+    let poolIdParam = pool_id || null;
+    
+    // Проверка на существование тренера и связанных ограничений
     if (coach_id) {
-      const coachResult = await pool.query('SELECT * FROM coaches WHERE id = $1', [coach_id]);
-      if (coachResult.rows.length === 0) {
+      const coachCheck = await pool.query('SELECT * FROM coaches WHERE id = $1', [coach_id]);
+      if (coachCheck.rows.length === 0) {
         return res.status(400).json({ error: 'Указанный тренер не существует' });
       }
+      
+      // Проверяем, что тренер назначен в бассейн
+      const coachPoolCheck = await pool.query('SELECT pool_id FROM coaches WHERE id = $1', [coach_id]);
+      
+      if (!coachPoolCheck.rows[0].pool_id) {
+        return res.status(400).json({ error: 'Выбранному тренеру не назначен бассейн' });
+      }
+      
+      // Если указан и бассейн, и тренер, проверяем их соответствие
+      if (pool_id && coachPoolCheck.rows[0].pool_id != pool_id) {
+        return res.status(400).json({ 
+          error: 'Несоответствие бассейна. Тренер работает в другом бассейне.' 
+        });
+      }
+      
+      // Используем бассейн тренера для группы
+      poolIdParam = coachPoolCheck.rows[0].pool_id;
     }
     
-    // Проверка на существование бассейна, если указан
-    if (pool_id) {
+    // Проверка на существование бассейна, если тренер не указан
+    if (!coach_id && pool_id) {
       const poolResult = await pool.query('SELECT * FROM pools WHERE id = $1', [pool_id]);
       if (poolResult.rows.length === 0) {
         return res.status(400).json({ error: 'Указанный бассейн не существует' });
       }
+    }
+    
+    // Проверка вместимости - не меньше, чем уже записано
+    const enrolledCount = await pool.query(
+      'SELECT COUNT(*) FROM group_enrollments WHERE group_id = $1 AND status = $2',
+      [id, 'active']
+    );
+    
+    const currentEnrolledCount = parseInt(enrolledCount.rows[0].count, 10);
+    if (capacity < currentEnrolledCount) {
+      return res.status(400).json({ 
+        error: `Вместимость не может быть меньше количества уже записанных участников (${currentEnrolledCount})`
+      });
     }
     
     // Обновление данных группы
@@ -386,9 +515,6 @@ router.put('/groups/:id', verifyToken, authorizeAdmin, async (req, res) => {
       WHERE id = $7
       RETURNING *
     `;
-    
-    const coachIdParam = coach_id || null;
-    const poolIdParam = pool_id || null;
     
     const result = await pool.query(updateQuery, [
       name, 

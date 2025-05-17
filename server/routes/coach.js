@@ -249,22 +249,52 @@ router.post('/groups', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const { name, capacity, description } = req.body;
     
-    // Создаем запись тренера, если её нет, и получаем coachId
-    const coachId = await ensureCoachExists(userId);
-    
-    // Создаем группу, используя coachId вместо userId
-    const groupResult = await pool.query(
-      `INSERT INTO groups (name, capacity, description, coach_id)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, name, capacity, description`,
-      [name, capacity, description, coachId] // Используем coachId, а НЕ userId
+    // Получаем ID тренера и его бассейн
+    const coachResult = await pool.query(
+      'SELECT id, pool_id FROM coaches WHERE user_id = $1',
+      [userId]
     );
     
-    console.log(`Группа создана для тренера ${coachId}`);
+    if (coachResult.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Профиль тренера не найден' 
+      });
+    }
+    
+    const coachId = coachResult.rows[0].id;
+    const poolId = coachResult.rows[0].pool_id;
+    
+    // Проверяем, назначен ли тренер в бассейн
+    if (!poolId) {
+      return res.status(400).json({
+        error: 'Вы не закреплены за бассейном. Обратитесь к администратору системы для назначения бассейна.'
+      });
+    }
+    
+    // Создаем группу с автоматическим указанием бассейна тренера
+    const groupResult = await pool.query(
+      `INSERT INTO groups (name, capacity, description, coach_id, pool_id)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, name, capacity, description, pool_id`,
+      [name, capacity, description, coachId, poolId]
+    );
+    
+    console.log(`Группа создана для тренера ${coachId} в бассейне ${poolId}`);
+    
+    // Получаем название бассейна для отображения в ответе
+    const poolResult = await pool.query(
+      'SELECT name FROM pools WHERE id = $1',
+      [poolId]
+    );
+    
+    const poolName = poolResult.rows.length > 0 ? poolResult.rows[0].name : 'Неизвестный бассейн';
     
     res.status(201).json({
-      message: 'Группа успешно создана',
-      group: groupResult.rows[0]
+      message: `Группа успешно создана в бассейне "${poolName}"`,
+      group: {
+        ...groupResult.rows[0],
+        pool_name: poolName
+      }
     });
     
   } catch (err) {

@@ -25,7 +25,7 @@ function AdminGroups() {
   
   const token = localStorage.getItem('token');
   
-  // Загрузка списка групп и необходимых данных для форм
+  // Загрузка данных
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -60,10 +60,30 @@ function AdminGroups() {
   // Обработчик изменения полей формы
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: name === 'capacity' ? parseInt(value, 10) : value
-    });
+    
+    if (name === 'coach_id') {
+      // Если выбран тренер, автоматически устанавливаем его бассейн
+      const selectedCoach = coaches.find(coach => coach.id === Number(value));
+      
+      if (selectedCoach && selectedCoach.pool_id) {
+        setFormData({
+          ...formData,
+          [name]: Number(value),
+          pool_id: selectedCoach.pool_id
+        });
+      } else {
+        setFormData({
+          ...formData,
+          [name]: Number(value),
+          pool_id: ''  // Сбрасываем бассейн, если у тренера его нет
+        });
+      }
+    } else {
+      setFormData({
+        ...formData,
+        [name]: name === 'capacity' ? parseInt(value, 10) : value
+      });
+    }
   };
   
   // Открыть модальное окно для добавления группы
@@ -72,8 +92,8 @@ function AdminGroups() {
       name: '',
       capacity: 10,
       description: '',
-      coach_id: coaches.length > 0 ? coaches[0].id : '',
-      pool_id: pools.length > 0 ? pools[0].id : '',
+      coach_id: '',
+      pool_id: '',
       category: 'adults'
     });
     setShowAddModal(true);
@@ -188,6 +208,11 @@ function AdminGroups() {
     }
   };
   
+  // Фильтруем тренеров по назначенным бассейнам
+  const getAvailableCoaches = () => {
+    return coaches.filter(coach => coach.pool_id); // Возвращаем только тренеров с назначенным бассейном
+  };
+  
   if (loading) {
     return <div className="loading">Загрузка данных...</div>;
   }
@@ -213,6 +238,7 @@ function AdminGroups() {
               <th>Бассейн</th>
               <th>Вместимость</th>
               <th>Записано</th>
+              <th>Категория</th>
               <th>Действия</th>
             </tr>
           </thead>
@@ -224,6 +250,7 @@ function AdminGroups() {
                 <td>{getPoolName(group.pool_id)}</td>
                 <td>{group.capacity}</td>
                 <td>{group.enrolled_count || 0}</td>
+                <td>{getCategoryText(group.category)}</td>
                 <td className="actions-cell">
                   <button 
                     className="edit-button"
@@ -294,12 +321,17 @@ function AdminGroups() {
                   onChange={handleInputChange}
                 >
                   <option value="">Выберите тренера</option>
-                  {coaches.map(coach => (
+                  {getAvailableCoaches().map(coach => (
                     <option key={coach.id} value={coach.id}>
-                      {coach.name}
+                      {coach.name} ({getPoolName(coach.pool_id)})
                     </option>
                   ))}
                 </select>
+                {coaches.length > 0 && getAvailableCoaches().length === 0 && (
+                  <div className="field-note">
+                    Нет тренеров с назначенным бассейном. Пожалуйста, сначала назначьте тренеров в бассейны.
+                  </div>
+                )}
               </div>
               
               <div className="form-group">
@@ -308,6 +340,7 @@ function AdminGroups() {
                   name="pool_id"
                   value={formData.pool_id}
                   onChange={handleInputChange}
+                  disabled={!!formData.coach_id} // Отключаем выбор бассейна, если выбран тренер
                 >
                   <option value="">Выберите бассейн</option>
                   {pools.map(pool => (
@@ -316,6 +349,11 @@ function AdminGroups() {
                     </option>
                   ))}
                 </select>
+                {formData.coach_id && (
+                  <div className="field-note">
+                    Бассейн автоматически выбран на основе назначения тренера
+                  </div>
+                )}
               </div>
               
               <div className="form-group">
@@ -394,9 +432,9 @@ function AdminGroups() {
                   onChange={handleInputChange}
                 >
                   <option value="">Выберите тренера</option>
-                  {coaches.map(coach => (
+                  {getAvailableCoaches().map(coach => (
                     <option key={coach.id} value={coach.id}>
-                      {coach.name}
+                      {coach.name} ({getPoolName(coach.pool_id)})
                     </option>
                   ))}
                 </select>
@@ -408,6 +446,7 @@ function AdminGroups() {
                   name="pool_id"
                   value={formData.pool_id}
                   onChange={handleInputChange}
+                  disabled={!!formData.coach_id} // Отключаем выбор бассейна, если выбран тренер
                 >
                   <option value="">Выберите бассейн</option>
                   {pools.map(pool => (
@@ -416,6 +455,11 @@ function AdminGroups() {
                     </option>
                   ))}
                 </select>
+                {formData.coach_id && (
+                  <div className="field-note">
+                    Бассейн автоматически выбран на основе назначения тренера
+                  </div>
+                )}
               </div>
               
               <div className="form-group">
