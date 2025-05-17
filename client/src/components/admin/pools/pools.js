@@ -7,6 +7,8 @@ function AdminPools() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingPool, setEditingPool] = useState(null);
+  // Добавляем состояние для отображения модального окна добавления бассейна
+  const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -89,6 +91,57 @@ function AdminPools() {
     }
   };
 
+  // НОВЫЙ КОД: Обработчик добавления нового бассейна
+  const handleAddPool = async () => {
+    try {
+      // Проверяем, что все обязательные поля заполнены
+      if (!formData.name || !formData.address || !formData.type) {
+        setError('Все поля обязательны для заполнения');
+        return;
+      }
+      
+      const response = await axios.post(
+        'http://localhost:3000/api/pools',
+        formData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Добавляем новый бассейн в список
+      setPools([...pools, response.data]);
+      
+      setSuccessMessage('Бассейн успешно добавлен');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+      // Закрываем модальное окно и сбрасываем форму
+      setShowAddModal(false);
+      setFormData({
+        name: '',
+        address: '',
+        type: 'sport'
+      });
+      
+    } catch (err) {
+      console.error('Ошибка при добавлении бассейна:', err);
+      setError(err.response?.data?.error || 'Ошибка при добавлении бассейна');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  // НОВЫЙ КОД: Открытие модального окна для добавления
+  const handleShowAddModal = () => {
+    setFormData({
+      name: '',
+      address: '',
+      type: 'sport'
+    });
+    setShowAddModal(true);
+  };
+
+  // НОВЫЙ КОД: Закрытие модального окна для добавления
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+  };
+  
   // Получение названия типа бассейна на русском
   const getPoolTypeText = (type) => {
     switch(type) {
@@ -101,7 +154,13 @@ function AdminPools() {
 
   return (
     <div className="admin-pools-container">
-      <h2>Управление бассейнами</h2>
+      {/* НОВЫЙ КОД: Добавляем заголовок с кнопкой добавления */}
+      <div className="pools-header">
+        <h2>Управление бассейнами</h2>
+        <button className="add-button" onClick={handleShowAddModal}>
+          Добавить бассейн
+        </button>
+      </div>
       
       {error && <div className="error-message">{error}</div>}
       {successMessage && <div className="success-message">{successMessage}</div>}
@@ -175,6 +234,59 @@ function AdminPools() {
               </button>
               <button className="save-button" onClick={handleSaveChanges}>
                 Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* НОВЫЙ КОД: Добавляем модальное окно для создания бассейна */}
+      {showAddModal && (
+        <div className="modal-overlay">
+          <div className="edit-modal">
+            <h3>Добавление нового бассейна</h3>
+            
+            <div className="form-group">
+              <label>Название:</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Введите название бассейна"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Адрес:</label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Введите адрес бассейна"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Тип:</label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+              >
+                <option value="sport">Спортивный</option>
+                <option value="health">Оздоровительный</option>
+                <option value="combined">Комбинированный</option>
+              </select>
+            </div>
+            
+            <div className="modal-buttons">
+              <button className="cancel-button" onClick={handleCloseAddModal}>
+                Отмена
+              </button>
+              <button className="save-button" onClick={handleAddPool}>
+                Добавить
               </button>
             </div>
           </div>
