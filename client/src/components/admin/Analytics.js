@@ -129,41 +129,51 @@ function Analytics() {
     }
 
     return (
-      <div className="pools-list">
+      <div className="pools-coaches-container">
         <h2>Список тренеров по бассейнам</h2>
         {data.map(pool => (
-          <div key={pool.pool_id || Math.random()} className="pool-item">
-            <h3>{pool.pool_name || "Бассейн без названия"}</h3>
+          <div key={pool.pool_id || Math.random()} className="pool-card">
+            <div className="pool-header">
+              <h3 className="pool-name">{pool.pool_name || "Бассейн без названия"}</h3>
+            </div>
+            
             {pool.coaches && Array.isArray(pool.coaches) && pool.coaches.some(coach => coach !== null) ? (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Имя</th>
-                    <th>Специализация</th>
-                    <th>Опыт</th>
-                    <th>Действия</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pool.coaches
-                    .filter(coach => coach !== null)
-                    .map(coach => (
-                      <tr key={coach.id || Math.random()}>
-                        <td>{coach.name || "Не указано"}</td>
-                        <td>{coach.specialty || "Не указана"}</td>
-                        <td>{coach.experience || 0} лет</td>
-                        <td>
-                          <button onClick={() => fetchCoachUsers(coach.id)}>
-                            Клиенты
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  }
-                </tbody>
-              </table>
+              <div className="coaches-table-container">
+                <table className="coaches-table">
+                  <thead>
+                    <tr>
+                      <th>Имя</th>
+                      <th>Специализация</th>
+                      <th>Опыт</th>
+                      <th>Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pool.coaches
+                      .filter(coach => coach !== null)
+                      .map(coach => (
+                        <tr key={coach.id || Math.random()}>
+                          <td>{coach.name || "Не указано"}</td>
+                          <td>{coach.specialty || "Не указана"}</td>
+                          <td>{coach.experience || 0} лет</td>
+                          <td>
+                            <button 
+                              className="btn btn-primary"
+                              onClick={() => fetchCoachUsers(coach.id)}
+                            >
+                              Клиенты
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    }
+                  </tbody>
+                </table>
+              </div>
             ) : (
-              <p>В этом бассейне нет тренеров</p>
+              <div className="no-coaches">
+                В этом бассейне нет тренеров
+              </div>
             )}
           </div>
         ))}
@@ -178,7 +188,7 @@ function Analytics() {
               </div>
               <div className="modal-body">
                 {coachUsers.length > 0 ? (
-                  <table className="data-table">
+                  <table className="coaches-table">
                     <thead>
                       <tr>
                         <th>Имя</th>

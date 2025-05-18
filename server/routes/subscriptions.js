@@ -119,4 +119,31 @@ router.put('/subscriptions/:id/update', verifyToken, async (req, res) => {
   }
 });
 
+// Находим функцию обновления абонемента (примерно строка 98)
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id, subscription_type_id, expiry_date, active } = req.body;
+
+    // Правильная проверка даты
+    const formattedExpiryDate = expiry_date && expiry_date.trim() !== '' 
+      ? expiry_date 
+      : null; // Используем NULL вместо пустой строки
+    
+    const result = await pool.query(
+      'UPDATE subscriptions SET user_id = $1, subscription_type_id = $2, expiry_date = $3, active = $4 WHERE id = $5 RETURNING *',
+      [user_id, subscription_type_id, formattedExpiryDate, active, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Абонемент не найден' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Ошибка при обновлении абонемента:', err);
+    res.status(500).json({ message: 'Ошибка сервера', error: err.message });
+  }
+});
+
 module.exports = router;

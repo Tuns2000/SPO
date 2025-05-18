@@ -80,32 +80,53 @@ function AdminCoaches() {
   // Обработчик обновления тренера
   const handleUpdateCoach = async () => {
     try {
-      // Проверяем, что бассейн выбран
-      if (!formData.pool_id) {
-        setError('Необходимо выбрать бассейн для тренера');
+      // Получаем токен из localStorage
+      const token = localStorage.getItem('token');
+      
+      // Проверяем наличие токена
+      if (!token) {
+        setError('Не авторизован. Пожалуйста, войдите снова.');
         return;
       }
-      
-      setError(null);
-      
+
+      // Добавляем токен в заголовок запроса
       const response = await axios.put(
-        `http://localhost:3000/api/admin/coaches/${currentCoach.id}`,
-        formData,
-        { headers: { Authorization: `Bearer ${token}` } }
+        `http://localhost:3000/api/coach/${currentCoach.id}`, 
+        {
+          specialty: formData.specialty,
+          experience: formData.experience || null,
+          description: formData.description,
+          pool_id: formData.pool_id
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      setCoaches(prevCoaches => 
+        prevCoaches.map(coach => 
+          coach.id === currentCoach.id ? { ...coach, ...response.data } : coach
+        )
       );
       
-      // Обновляем список тренеров
-      setCoaches(coaches.map(coach => 
-        coach.id === currentCoach.id ? response.data.coach : coach
-      ));
-      
-      setSuccessMessage(`Тренер ${currentCoach.name} успешно обновлен`);
-      setTimeout(() => setSuccessMessage(''), 3000);
-      
+      setSuccessMessage('Тренер успешно обновлен');
       handleCloseModal();
-    } catch (err) {
-      console.error('Ошибка при обновлении тренера:', err);
-      setError(err.response?.data?.error || 'Произошла ошибка при обновлении тренера');
+      
+      // Очищаем сообщение через 3 секунды
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
+    } catch (error) {
+      console.error('Ошибка при обновлении тренера:', error);
+      
+      // Улучшенная обработка ошибки с учетом проблем авторизации
+      if (error.response?.status === 401) {
+        setError('Сессия истекла. Пожалуйста, войдите снова.');
+      } else {
+        setError('Произошла ошибка при обновлении тренера');
+      }
     }
   };
   

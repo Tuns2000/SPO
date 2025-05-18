@@ -581,6 +581,34 @@ router.post('/', authMiddleware, roleMiddleware(['admin']), async (req, res) => 
   }
 });
 
+// Обновление тренера
+router.put('/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { specialty, experience, description, pool_id } = req.body;
+
+    // Проверка существования тренера
+    const coachCheck = await pool.query('SELECT * FROM coaches WHERE id = $1', [id]);
+    if (coachCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'Тренер не найден' });
+    }
+
+    // Проверка на null для числовых полей
+    const experienceValue = experience === '' ? null : experience;
+    
+    // Обновляем данные тренера
+    const result = await pool.query(
+      'UPDATE coaches SET specialty = $1, experience = $2, description = $3, pool_id = $4 WHERE id = $5 RETURNING *',
+      [specialty, experienceValue, description, pool_id, id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Ошибка при обновлении тренера:', err);
+    res.status(500).json({ message: 'Ошибка сервера', error: err.message });
+  }
+});
+
 // ВАЖНО: динамические маршруты ставим в КОНЕЦ файла!
 // Получение информации о конкретном тренере
 router.get('/:id', async (req, res) => {

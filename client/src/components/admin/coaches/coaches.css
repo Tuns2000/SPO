@@ -25,48 +25,104 @@
   color: #155724;
 }
 
+/* Стили для таблицы тренеров */
 .coaches-table-container {
+  margin: 20px 0;
   overflow-x: auto;
 }
 
 .coaches-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 20px;
-}
-
-.coaches-table th,
-.coaches-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #e0e0e0;
+  table-layout: fixed;
+  background-color: white;
 }
 
 .coaches-table th {
-  background-color: #f5f5f5;
-  font-weight: 600;
-}
-
-.coaches-table tbody tr:hover {
-  background-color: #f9f9f9;
-}
-
-.not-assigned {
-  color: #dc3545;
+  background-color: #f5f9ff;
+  color: #01579b;
   font-weight: 500;
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 2px solid #e3f2fd;
+  white-space: nowrap;
 }
 
+.coaches-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #e3f2fd;
+  vertical-align: middle;
+  word-break: break-word;
+}
+
+/* Задаем ширину каждого столбца */
+.coaches-table th:nth-child(1),
+.coaches-table td:nth-child(1) {
+  width: 5%;
+}
+
+.coaches-table th:nth-child(2),
+.coaches-table td:nth-child(2) {
+  width: 15%;
+}
+
+.coaches-table th:nth-child(3),
+.coaches-table td:nth-child(3) {
+  width: 15%;
+}
+
+.coaches-table th:nth-child(4),
+.coaches-table td:nth-child(4) {
+  width: 10%;
+  text-align: center;
+}
+
+.coaches-table th:nth-child(5),
+.coaches-table td:nth-child(5) {
+  width: 15%;
+}
+
+.coaches-table th:nth-child(6),
+.coaches-table td:nth-child(6) {
+  width: 15%;
+  text-align: center;
+}
+
+.coaches-table th:nth-child(7),
+.coaches-table td:nth-child(7) {
+  width: 15%;
+  text-align: center;
+}
+
+/* Стили для кнопки редактирования */
 .edit-button {
-  background-color: #007bff;
+  background-color: #0288d1;
   color: white;
   border: none;
-  padding: 6px 12px;
   border-radius: 4px;
+  padding: 8px 15px;
   cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s;
+  white-space: nowrap;
 }
 
 .edit-button:hover {
-  background-color: #0069d9;
+  background-color: #01579b;
+}
+
+/* Стиль для строки "Тренеры не найдены" */
+.no-data {
+  text-align: center;
+  padding: 20px;
+  color: #78909c;
+  font-style: italic;
+}
+
+/* Стили для индикации бассейна */
+.not-assigned {
+  color: #f44336;
+  font-style: italic;
 }
 
 .modal-overlay {
@@ -199,8 +255,9 @@
   font-style: italic;
 }
 
-.no-data {
-  text-align: center;
-  color: #666;
-  font-style: italic;
+/* Адаптивность для мобильных устройств */
+@media screen and (max-width: 992px) {
+  .coaches-table {
+    min-width: 800px;
+  }
 }
