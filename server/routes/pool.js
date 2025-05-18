@@ -204,15 +204,15 @@ router.get('/:id/stats', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Бассейн не найден' });
     }
     
-    // Количество групп по дням недели
+    // Количество групп по дням недели - ИСПРАВЛЕННЫЙ ЗАПРОС
     const groupsByDay = await pool.query(`
       SELECT 
-        extract(dow from s.date) as day_of_week,
-        count(distinct g.id) as group_count
+        EXTRACT(DOW FROM s.date) as day_of_week,
+        COUNT(DISTINCT g.id) as group_count
       FROM schedules s
       JOIN groups g ON s.group_id = g.id
       WHERE g.pool_id = $1
-      GROUP BY day_of_week
+      GROUP BY EXTRACT(DOW FROM s.date)  -- добавляем в GROUP BY
       ORDER BY day_of_week
     `, [poolId]);
     

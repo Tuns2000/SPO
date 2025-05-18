@@ -207,6 +207,18 @@ const GroupDetail = () => {
     );
   };
 
+  // Функция для преобразования кода категории в читаемое название
+  const getCategoryName = (category) => {
+    const categories = {
+      'beginners': 'Начинающие',
+      'teenagers': 'Подростки',
+      'adults': 'Взрослые',
+      'athletes': 'Спортсмены'
+    };
+    
+    return categories[category] || 'Не указана';
+  };
+
   return (
     <div className="group-detail-container">
       <button className="back-button" onClick={() => navigate('/groups')}>
@@ -231,71 +243,77 @@ const GroupDetail = () => {
           </div>
         </div>
         
-        {/* Остальная информация о группе */}
-        <div className="group-info-section">
-          <div className="group-detail-info">
-            <div className="group-detail-left">
-              <div className="info-block">
-                <h3>О группе</h3>
-                <p className="group-description">{group.description}</p>
-                
-                <div className="coach-info">
-                  <h4>Тренер</h4>
-                  <p><strong>{group.coach_name || 'Не назначен'}</strong></p>
-                  {group.specialty && <p>Специализация: {group.specialty}</p>}
-                </div>
-                
-                <div className="capacity-info">
-                  <h4>Вместимость</h4>
-                  <div className="capacity-display">
-                    <div className="capacity-text">
-                      <span className="capacity-current">{group.enrolled_count}</span>
-                      <span className="capacity-slash">/</span>
-                      <span className="capacity-total">{group.capacity}</span>
-                    </div>
-                    <div className="group-capacity-bar detail-bar">
-                      <div 
-                        className="group-capacity-filled" 
-                        style={{
-                          width: `${(group.enrolled_count / group.capacity) * 100}%`,
-                          backgroundColor: group.enrolled_count >= group.capacity ? '#e74c3c' : '#3498db'
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
+        
+          {/* Добавляем отображение категории */}
+          <div className="info-item">
+            <span className="info-label">Категория:</span>
+            <span className="info-value">{getCategoryName(group.category)}</span>
+          </div>
+          
+          
+        
+        <div className="group-detail-info">
+          <div className="group-detail-left">
+            <div className="info-block">
+              <h3>О группе</h3>
+              <p className="group-description">{group.description}</p>
+              
+              <div className="coach-info">
+                <h4>Тренер</h4>
+                <p><strong>{group.coach_name || 'Не назначен'}</strong></p>
+                {group.specialty && <p>Специализация: {group.specialty}</p>}
               </div>
               
-              <div className="enrollment-block">
-                {enrollMessage && (
-                  <div className={`message ${enrollMessage.type === 'error' ? 'error-message' : 'success-message'}`}>
-                    {enrollMessage.text}
+              <div className="capacity-info">
+                <h4>Вместимость</h4>
+                <div className="capacity-display">
+                  <div className="capacity-text">
+                    <span className="capacity-current">{group.enrolled_count}</span>
+                    <span className="capacity-slash">/</span>
+                    <span className="capacity-total">{group.capacity}</span>
                   </div>
-                )}
-                
-                <button 
-                  className="enroll-button"
-                  onClick={handleEnrollment}
-                  disabled={enrolling || parseInt(group.enrolled_count) >= parseInt(group.capacity)}
-                >
-                  {enrolling ? 'Выполняется запись...' : 'Записаться в группу'}
-                </button>
-                
-                {!isAuthenticated && (
-                  <p className="login-prompt">Для записи в группу необходимо <a href="/login">войти в систему</a></p>
-                )}
-                
-                {parseInt(group.enrolled_count) >= parseInt(group.capacity) && (
-                  <p className="full-group-message">Группа заполнена. Пожалуйста, выберите другую группу.</p>
-                )}
+                  <div className="group-capacity-bar detail-bar">
+                    <div 
+                      className="group-capacity-filled" 
+                      style={{
+                        width: `${(group.enrolled_count / group.capacity) * 100}%`,
+                        backgroundColor: group.enrolled_count >= group.capacity ? '#e74c3c' : '#3498db'
+                      }}
+                    ></div>
+                  </div>
+                </div>
               </div>
             </div>
             
-            <div className="group-detail-right">
-              <div className="schedule-block">
-                <h3>Расписание занятий</h3>
-                {renderSchedule()}
-              </div>
+            <div className="enrollment-block">
+              {enrollMessage && (
+                <div className={`message ${enrollMessage.type === 'error' ? 'error-message' : 'success-message'}`}>
+                  {enrollMessage.text}
+                </div>
+              )}
+              
+              <button 
+                className="enroll-button"
+                onClick={handleEnrollment}
+                disabled={enrolling || parseInt(group.enrolled_count) >= parseInt(group.capacity)}
+              >
+                {enrolling ? 'Выполняется запись...' : 'Записаться в группу'}
+              </button>
+              
+              {!isAuthenticated && (
+                <p className="login-prompt">Для записи в группу необходимо <a href="/login">войти в систему</a></p>
+              )}
+              
+              {parseInt(group.enrolled_count) >= parseInt(group.capacity) && (
+                <p className="full-group-message">Группа заполнена. Пожалуйста, выберите другую группу.</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="group-detail-right">
+            <div className="schedule-block">
+              <h3>Расписание занятий</h3>
+              {renderSchedule()}
             </div>
           </div>
         </div>

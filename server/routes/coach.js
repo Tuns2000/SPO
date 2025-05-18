@@ -247,7 +247,13 @@ router.get('/groups', authMiddleware, async (req, res) => {
 router.post('/groups', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { name, capacity, description } = req.body;
+    // Добавляем поле category в запрос
+    const { name, capacity, description, category } = req.body;
+    
+    // Проверка на допустимые значения категории
+    if (category && !['beginners', 'teenagers', 'adults', 'athletes'].includes(category)) {
+      return res.status(400).json({ error: 'Неверная категория группы' });
+    }
     
     // Получаем ID тренера и его бассейн
     const coachResult = await pool.query(
@@ -256,9 +262,7 @@ router.post('/groups', authMiddleware, async (req, res) => {
     );
     
     if (coachResult.rows.length === 0) {
-      return res.status(404).json({ 
-        error: 'Профиль тренера не найден' 
-      });
+      return res.status(404).json({ error: 'Профиль тренера не найден' });
     }
     
     const coachId = coachResult.rows[0].id;
@@ -266,20 +270,18 @@ router.post('/groups', authMiddleware, async (req, res) => {
     
     // Проверяем, назначен ли тренер в бассейн
     if (!poolId) {
-      return res.status(400).json({
-        error: 'Вы не закреплены за бассейном. Обратитесь к администратору системы для назначения бассейна.'
-      });
+      return res.status(400).json({ error: 'Вы не назначены в бассейн. Обратитесь к администратору для назначения.' });
     }
     
-    // Создаем группу с автоматическим указанием бассейна тренера
+    // Создаем группу с автоматическим указанием бассейна тренера и категории
     const groupResult = await pool.query(
-      `INSERT INTO groups (name, capacity, description, coach_id, pool_id)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, name, capacity, description, pool_id`,
-      [name, capacity, description, coachId, poolId]
+      `INSERT INTO groups (name, capacity, description, coach_id, pool_id, category)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, name, capacity, description, pool_id, category`,
+      [name, capacity, description, coachId, poolId, category || 'beginners'] // По умолчанию - начинающие
     );
     
-    console.log(`Группа создана для тренера ${coachId} в бассейне ${poolId}`);
+    console.log(`Группа создана для тренера ${coachId} в бассейне ${poolId}, категория: ${category || 'beginners'}`);
     
     // Получаем название бассейна для отображения в ответе
     const poolResult = await pool.query(

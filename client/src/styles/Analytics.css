@@ -204,6 +204,181 @@
   line-height: 1.6;
 }
 
+/* Аналитика */
+.analytics-section {
+  margin: 20px 0;
+}
+
+.analytics-section h2 {
+  color: #2c3e50;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+}
+
+.analytics-pool-item {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.analytics-pool-item h3 {
+  background-color: #2c80b9;
+  color: white;
+  margin: 0;
+  padding: 15px;
+  font-size: 1.2rem;
+}
+
+.analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.analytics-table th {
+  background-color: #f5f7fa;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #606f7b;
+  border-bottom: 2px solid #eee;
+}
+
+.analytics-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  position: relative;
+}
+
+.analytics-table tfoot {
+  background-color: #f8fafc;
+}
+
+.analytics-table tfoot td {
+  padding: 12px;
+  color: #2c3e50;
+}
+
+.groups-count {
+  position: relative;
+  padding-right: 50px !important;
+}
+
+.bar-indicator {
+  position: absolute;
+  height: 80%;
+  bottom: 10%;
+  left: 0;
+  opacity: 0.3;
+  border-radius: 2px;
+  z-index: 0;
+}
+
+.has-groups {
+  background-color: #f0ffff;
+}
+
+.no-data {
+  padding: 30px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Дополните файл стилей */
+/* filepath: c:\Users\arsen\Desktop\С(●'◡'●)ПО\Project\client\src\styles\Analytics.css */
+
+.top-profit-pool {
+  margin-bottom: 30px;
+}
+
+.top-profit-pool h2 {
+  color: #2c3e50;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+}
+
+.pool-details {
+  padding: 20px;
+  background-color: #fcfcfc;
+}
+
+.detail-row {
+  display: flex;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.detail-row strong {
+  width: 300px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.detail-row .revenue {
+  font-size: 1.2em;
+  font-weight: 600;
+  color: #2980b9;
+}
+
+.explanation {
+  background-color: #f8f9fa;
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 5px;
+  border-left: 4px solid #3498db;
+}
+
+.explanation h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+.explanation code {
+  background-color: #f1f1f1;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* Добавляем стили для отображения прибыли тренеров */
+.coach-profit {
+  margin-top: 20px;
+}
+
+.coach-profit .analytics-table {
+  margin-bottom: 30px;
+}
+
+.coach-profit .numeric {
+  text-align: right;
+}
+
+.coach-profit .profit {
+  font-weight: 600;
+  color: #27ae60;
+  position: relative;
+  text-align: right;
+}
+
+.profit-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  background-color: #2ecc71;
+  transition: width 0.3s ease;
+  border-radius: 0 2px 2px 0;
+}
+
 /* Адаптивная верстка */
 @media (max-width: 768px) {
   .analytics-container {

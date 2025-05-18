@@ -4,6 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import '../../styles/CoachDashboard.css';
 
 function CoachDashboard() {
+  // Добавляем функцию для преобразования кода категории в читаемое название
+  const getCategoryName = (category) => {
+    const categories = {
+      'beginners': 'Начинающие',
+      'teenagers': 'Подростки',
+      'adults': 'Взрослые',
+      'athletes': 'Спортсмены'
+    };
+    
+    return categories[category] || 'Не указана';
+  };
+
   // Состояния
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
@@ -20,7 +32,8 @@ function CoachDashboard() {
   const [groupForm, setGroupForm] = useState({
     name: '',
     capacity: 10,
-    description: ''
+    description: '',
+    category: 'beginners' // Значение по умолчанию - начинающие
   });
   
   // Данные групп
@@ -95,7 +108,13 @@ function CoachDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setGroups(response.data);
+      // Добавляем категорию по умолчанию, если она отсутствует
+      const groupsWithCategory = response.data.map(group => ({
+        ...group,
+        category: group.category || 'beginners'
+      }));
+      
+      setGroups(groupsWithCategory);
       setLoading(false);
     } catch (err) {
       console.error('Ошибка при загрузке групп:', err);
@@ -189,7 +208,7 @@ function CoachDashboard() {
       
       alert('Группа успешно создана');
       loadGroups();
-      setGroupForm({ name: '', capacity: 10, description: '' });
+      setGroupForm({ name: '', capacity: 10, description: '', category: 'beginners' });
     } catch (err) {
       console.error('Ошибка при создании группы:', err);
       alert('Не удалось создать группу');
@@ -202,7 +221,8 @@ function CoachDashboard() {
     setGroupForm({
       name: group.name,
       capacity: group.capacity,
-      description: group.description || ''
+      description: group.description || '',
+      category: group.category || 'beginners' // Если нет категории, ставим значение по умолчанию
     });
   };
 
@@ -245,7 +265,8 @@ function CoachDashboard() {
       loadGroups();
       if (selectedGroup && selectedGroup.id === id) {
         setSelectedGroup(null);
-        setGroupForm({ name: '', capacity: 10, description: '' });
+        // Обновляем, чтобы включить поле category
+        setGroupForm({ name: '', capacity: 10, description: '', category: 'beginners' });
       }
     } catch (err) {
       console.error('Ошибка при удалении группы:', err);
@@ -411,6 +432,22 @@ function CoachDashboard() {
                       />
                     </div>
                     
+                    {/* Добавляем выбор категории */}
+                    <div className="form-group">
+                      <label>Категория группы</label>
+                      <select
+                        name="category"
+                        value={groupForm.category}
+                        onChange={handleGroupInputChange}
+                        required
+                      >
+                        <option value="beginners">Начинающие</option>
+                        <option value="teenagers">Подростки</option>
+                        <option value="adults">Взрослые</option>
+                        <option value="athletes">Спортсмены</option>
+                      </select>
+                    </div>
+                    
                     <div className="form-group">
                       <label>Описание</label>
                       <textarea
@@ -452,6 +489,8 @@ function CoachDashboard() {
                         {group.enrolled_count !== undefined && (
                           <span>Участники: {group.enrolled_count}/{group.capacity}</span>
                         )}
+                        {/* Добавляем отображение категории */}
+                        <span>Категория: {getCategoryName(group.category)}</span>
                       </div>
                       <button 
                         className="edit-btn" 
@@ -501,6 +540,22 @@ function CoachDashboard() {
                 min="1"
                 required
               />
+            </div>
+            
+            {/* Добавляем выбор категории */}
+            <div className="form-group">
+              <label>Категория группы</label>
+              <select
+                name="category"
+                value={groupForm.category}
+                onChange={handleGroupInputChange}
+                required
+              >
+                <option value="beginners">Начинающие</option>
+                <option value="teenagers">Подростки</option>
+                <option value="adults">Взрослые</option>
+                <option value="athletes">Спортсмены</option>
+              </select>
             </div>
             
             <div className="form-group">

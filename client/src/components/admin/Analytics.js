@@ -19,35 +19,40 @@ function Analytics() {
 
   // Получение данных с сервера
   const fetchData = async (endpoint) => {
-    setLoading(true);
-    setError(null);
+    const token = localStorage.getItem('token');
     
     try {
-      const response = await axios.get(
-        `http://localhost:3000/api/analytics/${endpoint}`, 
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      setLoading(true);
+      setError(null);
       
-      // Проверка на случай пустого ответа или ответа с пустым массивом
-      if (!response.data || (Array.isArray(response.data) && response.data.length === 0)) {
-        console.log(`Получен пустой ответ для ${endpoint}`);
-        setData([]);
-        return;
+      const response = await axios.get(`http://localhost:3000/api/analytics/${endpoint}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Проверяем, что данные соответствуют ожидаемому типу
+      if (endpoint === 'coaches-for-beginners' || endpoint === 'groups-by-day') {
+        if (!Array.isArray(response.data)) {
+          console.warn(`Неожиданный формат данных от ${endpoint}:`, response.data);
+          setData([]);
+        } else {
+          setData(response.data);
+        }
+      } else {
+        setData(response.data);
       }
       
-      setData(response.data);
+      setLoading(false);
     } catch (err) {
-      console.error(`Ошибка при загрузке данных для ${endpoint}:`, err);
+      console.error(`Ошибка при загрузке данных (${endpoint}):`, err);
+      setError(`Не удалось загрузить данные: ${err.message}`);
       
-      // Проверяем наличие детального сообщения от сервера
-      const errorMessage = err.response?.data?.message || err.response?.data?.details ||
-                           'Не удалось загрузить данные';
+      // В случае ошибки устанавливаем пустой массив для нужных эндпоинтов
+      if (endpoint === 'coaches-for-beginners' || endpoint === 'groups-by-day') {
+        setData([]);
+      } else {
+        setData(null);
+      }
       
-      setError(`${errorMessage}. Проверьте, что все необходимые таблицы созданы в базе данных.`);
-      
-      // Устанавливаем пустые данные вместо undefined
-      setData([]);
-    } finally {
       setLoading(false);
     }
   };
@@ -84,18 +89,22 @@ function Analytics() {
     }
 
     if (error) {
-      return <div className="error-message">{error}</div>;
+      return <div className="error">{error}</div>;
     }
 
     switch (activeTab) {
       case 'coaches-by-pools':
         return renderCoachesByPools();
-      case 'coach-profit-by-pool':
-        return renderCoachProfitByPool();
+      case 'coach-profit':
+        return renderCoachProfit();
       case 'coaches-for-beginners':
-        return renderCoachesForBeginners();
+        return Array.isArray(data) 
+          ? renderCoachesForBeginners(data) 
+          : renderCoachesForBeginners([]);
       case 'groups-by-day':
-        return renderGroupsByDay();
+        return Array.isArray(data) 
+          ? renderGroupsByDay(data) 
+          : renderGroupsByDay([]);
       case 'top-profit-pool':
         return renderTopProfitPool();
       default:
@@ -196,67 +205,80 @@ function Analytics() {
     );
   };
 
-  // Рендеринг прибыли тренеров по бассейнам
-  const renderCoachProfitByPool = () => {
-    if (!data || data.length === 0) {
+  // Обновляем функцию для отображения прибыли тренеров
+  const renderCoachProfit = () => {
+    if (!data || !Array.isArray(data)) {
+      return <div className="no-data">Загрузка данных о прибыли тренеров...</div>;
+    }
+
+    if (data.length === 0) {
       return <div className="no-data">Нет данных о прибыли тренеров</div>;
     }
 
-    // Группировка тренеров по бассейнам для удобства отображения
-    const poolsMap = {};
-    data.forEach(item => {
-      if (!poolsMap[item.pool_id]) {
-        poolsMap[item.pool_id] = {
-          id: item.pool_id || 'unknown',
-          name: item.pool_name || 'Не указан',
-          coaches: []
-        };
-      }
-      
-      // Безопасное добавление данных с приведением типов
-      poolsMap[item.pool_id].coaches.push({
-        id: item.coach_id || `unknown-${Math.random().toString(36).substring(7)}`,
-        name: item.coach_name || 'Не указан',
-        profit: parseFloat(item.profit || 0)
-      });
-    });
-
     return (
-      <div className="profit-report">
-        <h2>Прибыль тренеров по бассейнам</h2>
-        {Object.values(poolsMap).map(pool => (
-          <div key={pool.id} className="pool-item">
-            <h3>{pool.name}</h3>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Тренер</th>
-                  <th>Прибыль</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pool.coaches.map(coach => (
-                  <tr key={coach.id}>
-                    <td>{coach.name}</td>
-                    <td>{coach.profit.toFixed(2)} ₽</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))}
+      <div className="coach-profit">
+        <h2>Прибыль тренеров</h2>
+        
+        <table className="analytics-table">
+          <thead>
+            <tr>
+              <th>ФИО тренера</th>
+              <th>Бассейн</th>
+              <th>Специализация</th>
+              <th>Опыт</th>
+              <th>Кол-во групп</th>
+              <th>Кол-во учеников</th>
+              <th>Выручка</th>
+              <th>Прибыль (40%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((coach, index) => (
+              <tr key={coach.coach_id || index}>
+                <td>{coach.coach_name}</td>
+                <td>{coach.pool_name || "—"}</td>
+                <td>{coach.specialty || "—"}</td>
+                <td>{coach.experience ? `${coach.experience} лет` : "—"}</td>
+                <td className="numeric">{coach.group_count || 0}</td>
+                <td className="numeric">{coach.student_count || 0}</td>
+                <td className="numeric">
+                  {Number(coach.revenue).toLocaleString('ru-RU')} ₽
+                </td>
+                <td className="profit">
+                  {Number(coach.profit).toLocaleString('ru-RU')} ₽
+                  <div 
+                    className="profit-bar" 
+                    style={{
+                      width: `${Math.min((coach.profit / data[0].profit) * 100, 100)}%`
+                    }}
+                  ></div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        
+        <div className="explanation">
+          
+        </div>
       </div>
     );
   };
 
   // Рендеринг тренеров для начинающих
-  const renderCoachesForBeginners = () => {
-    if (!data || data.length === 0) {
-      return <div className="no-data">Нет тренеров для начинающих</div>;
+  const renderCoachesForBeginners = (data) => {
+    // Проверка на массив
+    if (!data || !Array.isArray(data)) {
+      console.error('Ожидался массив в renderCoachesForBeginners, получено:', typeof data, data);
+      return <div className="no-data">Данные недоступны или имеют неверный формат</div>;
+    }
+    
+    if (data.length === 0) {
+      return <div className="no-data">Нет данных о тренерах для начинающих</div>;
     }
 
     return (
-      <div className="beginners-coaches">
+      <div className="coaches-beginners">
         <h2>Тренеры для начинающих</h2>
         <table className="data-table">
           <thead>
@@ -265,15 +287,17 @@ function Analytics() {
               <th>Специализация</th>
               <th>Опыт</th>
               <th>Бассейн</th>
+              {data[0].group_names !== undefined && <th>Группы</th>}
             </tr>
           </thead>
           <tbody>
-            {data.map(coach => (
-              <tr key={coach.id}>
-                <td>{coach.name}</td>
+            {data.map((coach, index) => (
+              <tr key={coach.id || index}>
+                <td>{coach.name || "Не указано"}</td>
                 <td>{coach.specialty || "Не указана"}</td>
-                <td>{coach.experience ? `${coach.experience} лет` : "Не указан"}</td>
+                <td>{coach.experience || 0} лет</td>
                 <td>{coach.pool_name || "Не указан"}</td>
+                {coach.group_names !== undefined && <td>{coach.group_names}</td>}
               </tr>
             ))}
           </tbody>
@@ -283,81 +307,151 @@ function Analytics() {
   };
 
   // Рендеринг групп по дням недели
-  const renderGroupsByDay = () => {
-    if (!data || data.length === 0) {
-      return <div className="no-data">Нет данных о группах</div>;
+  const renderGroupsByDay = (data) => {
+    if (!data || !Array.isArray(data)) {
+      console.error('Ожидался массив в renderGroupsByDay, получено:', typeof data, data);
+      return <div className="no-data">Данные недоступны или имеют неверный формат</div>;
+    }
+    
+    if (data.length === 0) {
+      return <div className="no-data">Нет данных о группах по дням недели</div>;
     }
 
-    // Группировка данных по бассейнам для удобства отображения
+    // Группируем данные по бассейнам
     const poolsMap = {};
     data.forEach(item => {
-      if (!poolsMap[item.pool_id]) {
-        poolsMap[item.pool_id] = {
-          id: item.pool_id,
+      if (!poolsMap[item.pool_name]) {
+        poolsMap[item.pool_name] = {
+          pool_id: item.pool_id,
           name: item.pool_name,
           days: {}
         };
       }
       
-      const dayNumber = parseFloat(item.day_of_week);
-      const dayName = getDayName(dayNumber);
-      
-      poolsMap[item.pool_id].days[dayNumber] = {
-        name: dayName,
-        count: item.group_count
-      };
+      // day_of_week: 1 (Пн) - 7 (Вс)
+      poolsMap[item.pool_name].days[item.day_of_week] = item.group_count;
     });
 
+    // Определение названий дней недели
+    const dayNames = {
+      1: 'Понедельник',
+      2: 'Вторник',
+      3: 'Среда',
+      4: 'Четверг',
+      5: 'Пятница',
+      6: 'Суббота',
+      7: 'Воскресенье'
+    };
+    
+    // Сортировка дней недели для правильного отображения
+    const sortedDays = [1, 2, 3, 4, 5, 6, 7];
+
     return (
-      <div className="groups-by-day">
+      <div className="analytics-section">
         <h2>Количество групп по дням недели</h2>
-        {Object.values(poolsMap).map(pool => (
-          <div key={pool.id} className="pool-item">
-            <h3>{pool.name}</h3>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>День недели</th>
-                  <th>Количество групп</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[0, 1, 2, 3, 4, 5, 6].map(dayNumber => (
-                  <tr key={dayNumber}>
-                    <td>{getDayName(dayNumber)}</td>
-                    <td>{pool.days[dayNumber]?.count || 0}</td>
+        
+        {Object.keys(poolsMap).length === 0 ? (
+          <p>Нет данных для отображения</p>
+        ) : (
+          Object.values(poolsMap).map((pool, index) => (
+            <div key={pool.pool_id || index} className="analytics-pool-item">
+              <h3>{pool.name}</h3>
+              
+              <table className="analytics-table">
+                <thead>
+                  <tr>
+                    <th>День недели</th>
+                    <th>Количество групп</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))}
+                </thead>
+                <tbody>
+                  {sortedDays.map(day => (
+                    <tr key={day} className={pool.days[day] > 0 ? 'has-groups' : ''}>
+                      <td>{dayNames[day]}</td>
+                      <td className="groups-count">
+                        {pool.days[day] || 0}
+                        {pool.days[day] > 0 && (
+                          <div className="bar-indicator" style={{
+                            width: `${Math.min(pool.days[day] * 20, 100)}%`,
+                            backgroundColor: getBarColor(pool.days[day])
+                          }}></div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td><strong>Всего:</strong></td>
+                    <td>
+                      <strong>
+                        {sortedDays.reduce((sum, day) => sum + (pool.days[day] || 0), 0)} групп
+                      </strong>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ))
+        )}
       </div>
     );
   };
 
+  // Вспомогательная функция для определения цвета индикатора по количеству групп
+  const getBarColor = (count) => {
+    if (count <= 1) return '#9BE9A8';  // светло-зеленый
+    if (count <= 3) return '#40C463';  // зеленый
+    if (count <= 5) return '#30A14E';  // темно-зеленый
+    return '#216E39';  // очень темно-зеленый
+  };
+
   // Рендеринг бассейна с максимальной выручкой
   const renderTopProfitPool = () => {
-    if (!data || !Object.keys(data).length) {
-      return <div className="no-data">Нет данных о прибыльности бассейнов</div>;
+    if (!data) {
+      return <div className="no-data">Загрузка данных...</div>;
+    }
+
+    if (data.name === "Нет данных") {
+      return <div className="no-data">Нет данных о бассейнах и абонементах</div>;
     }
 
     return (
-      <div className="top-pool">
+      <div className="top-profit-pool">
         <h2>Бассейн с максимальной выручкой</h2>
-        <div className="top-pool-info">
+        
+        <div className="analytics-pool-item">
           <h3>{data.name}</h3>
-          <p>{data.address}</p>
-          <div className="stats">
-            <div className="stat-item">
-              <span className="stat-label">Общая выручка:</span>
-              {/* Здесь нужно добавить проверку перед вызовом toFixed */}
-              <span className="stat-value">{(data.total_revenue !== undefined ? Number(data.total_revenue) : 0).toFixed(2)} ₽</span>
+          
+          <div className="pool-details">
+            <div className="detail-row">
+              <strong>Адрес:</strong>
+              <span>{data.address || "Не указан"}</span>
             </div>
-            <div className="stat-item">
-              <span className="stat-label">Количество абонементов:</span>
-              <span className="stat-value">{data.subscription_count || 0}</span>
+            
+            <div className="detail-row">
+              <strong>Общая выручка:</strong>
+              <span className="revenue">{Number(data.total_revenue).toLocaleString('ru-RU')} ₽</span>
             </div>
+            
+            <div className="detail-row">
+              <strong>Количество проданных абонементов:</strong>
+              <span>{data.subscription_count}</span>
+            </div>
+            
+            <div className="detail-row">
+              <strong>Средняя стоимость абонемента:</strong>
+              <span>
+                {data.subscription_count > 0 
+                  ? Math.round(data.total_revenue / data.subscription_count).toLocaleString('ru-RU')
+                  : 0} ₽
+              </span>
+            </div>
+          </div>
+          
+          <div className="explanation">
+           
+
           </div>
         </div>
       </div>
@@ -376,8 +470,8 @@ function Analytics() {
             Тренеры по бассейнам
           </li>
           <li 
-            className={activeTab === 'coach-profit-by-pool' ? 'active' : ''}
-            onClick={() => setActiveTab('coach-profit-by-pool')}
+            className={activeTab === 'coach-profit' ? 'active' : ''}
+            onClick={() => setActiveTab('coach-profit')}
           >
             Прибыль тренеров
           </li>

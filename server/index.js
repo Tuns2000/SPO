@@ -13,6 +13,7 @@ const { addCategoryColumn } = require('./migrations/add-category-column');
 const { addScheduleTable } = require('./migrations/add-schedule-table');
 const { addUpdatedAtColumn } = require('./migrations/add-updated-at-column');
 const { addCoachPoolTable } = require('./migrations/add-coach-pool-table');
+const { addDayOfWeekColumn } = require('./migrations/add-day-of-week-column');
 const errorHandler = require('./middleware/errorHandler');
 const requestLogger = require('./middleware/requestLogger');
 const swaggerOptions = require('./utils/swagger');
@@ -44,6 +45,7 @@ async function initialize() {
     await addPoolIdToGroups();
     await addCategoryColumn();
     await addScheduleTable();
+    await addDayOfWeekColumn(); // Добавляем новую миграцию
     await addUpdatedAtColumn();
     await addCoachPoolTable(); // Добавляем новую миграцию
     logger.info('База данных и миграции инициализированы');
